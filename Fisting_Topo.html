@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Actively Fisting Overlay</title>
+  <title>Actively Fisting Overlay (Topo Banner Test)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="common/ui.css?v=6" />
+  <link rel="stylesheet" href="common/ui.css" />
 
   <style>
     :root {
@@ -235,7 +235,7 @@
 <body>
 
   <!-- Main Overlay -->
-  <div class="overlay-panel tf-panel tf-radar-sweep">
+  <div class="overlay-panel tf-panel tf-topo-lines">
     <img src="fisters_logo.png" class="logo-inline" alt="Logo">
     <div class="tf-col">
       <div class="tf-title target-location" id="target-text" data-text="ACTIVELY FISTING: ...">ACTIVELY FISTING: ...</div>
@@ -252,7 +252,7 @@
   </div>
 
   <!-- Donation Banner -->
-  <div class="support-banner tf-panel tf-radar-sweep" id="donationBanner">
+  <div class="support-banner tf-panel tf-topo-lines" id="donationBanner">
     <div class="support-text">
       Support the chase: grab merch and help keep us in the field.
     </div>
@@ -267,10 +267,6 @@
   <!-- Map -->
   <div id="map-container">
     <div id="map"></div>
-    <div class="tf-legend-ring" id="radar-legend" data-product="bref" aria-hidden="true"></div>
-    <svg class="tf-legend-labels" id="radar-legend-labels" viewBox="0 0 100 100" aria-hidden="true"></svg>
-    <div class="tf-map-hud" id="radar-hud"><span class="dot"></span><span id="radar-hud-text">REF (dBZ) --</span></div>
-    <div class="tf-radar-unavailable" id="radar-unavailable" hidden>Radar unavailable</div>
   </div>
 
   <!-- Audio -->
@@ -284,8 +280,7 @@
   <script src="common/state.js?v=1"></script>
   <script src="common/clock.js?v=1"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="common/map_overlays.js?v=9"></script>
-  <script src="common/legend.js?v=6"></script>
+  <script src="common/map_overlays.js?v=8"></script>
   <script>
     const map = L.map('map', {
       center: [0, 0],
@@ -321,68 +316,6 @@
     const nwsWarnings = window.OverlayMapOverlays.createWarningsLayer(map);
     const radar = window.OverlayMapOverlays.createRadarLayer(map);
     radar.init();
-
-    // Radar HUD + legend ring
-    const radarHud = document.getElementById('radar-hud');
-    const radarHudText = document.getElementById('radar-hud-text');
-    const radarLegend = document.getElementById('radar-legend');
-    const radarLegendLabels = document.getElementById('radar-legend-labels');
-    const radarUnavailable = document.getElementById('radar-unavailable');
-    let lastRadarTileLoadAt = null;
-    let lastRadarTileErrorAt = null;
-    let radarInitBeganAt = null;
-    let currentRadarProduct = 'bref';
-
-    function fmtAge(ms) {
-      if (ms == null) return '--';
-      const s = Math.max(0, Math.floor(ms / 1000));
-      const m = Math.floor(s / 60);
-      const r = s % 60;
-      return m > 0 ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
-    }
-
-    function productLabel(p) {
-      if (p === 'n0s') return 'SRV (kt)';
-      if (p === 'n0c') return 'CC (ρhv)';
-      return p === 'bvel' ? 'VEL (kt)' : 'REF (dBZ)';
-    }
-
-    function updateRadarHud() {
-      if (!radarHudText) return;
-      const age = lastRadarTileLoadAt ? (Date.now() - lastRadarTileLoadAt) : null;
-      radarHudText.textContent = `${productLabel(currentRadarProduct)} ${fmtAge(age)}`;
-
-      if (radarHud) {
-        if (age != null && age > 180000) radarHud.classList.add('stale');
-        else radarHud.classList.remove('stale');
-      }
-
-      if (radarLegend) radarLegend.setAttribute('data-product', currentRadarProduct);
-
-      if (radarUnavailable) {
-        const now = Date.now();
-        const hadErrorRecently = lastRadarTileErrorAt && (now - lastRadarTileErrorAt < 120000);
-        const noSuccessYet = !lastRadarTileLoadAt && radarInitBeganAt && (now - radarInitBeganAt > 20000);
-        const unavailable = Boolean(hadErrorRecently || noSuccessYet);
-        radarUnavailable.hidden = !unavailable;
-        if (unavailable) radarUnavailable.textContent = `${productLabel(currentRadarProduct)} unavailable`;
-      }
-    }
-
-    radar.subscribeStatus((s) => {
-      if (!s) return;
-      if (s.product) currentRadarProduct = s.product;
-      if (s.lastTileLoadAt) lastRadarTileLoadAt = s.lastTileLoadAt;
-      if (s.lastTileErrorAt) lastRadarTileErrorAt = s.lastTileErrorAt;
-      if (s.initBeganAt) radarInitBeganAt = s.initBeganAt;
-      updateRadarHud();
-      if (window.OverlayLegend && radarLegend) {
-        const p = s.product || currentRadarProduct;
-        window.OverlayLegend.applyWmsLegendRing({ ringEl: radarLegend, siteId: s.site, product: p });
-        window.OverlayLegend.applyLegendLabels({ svgEl: radarLegendLabels, product: p });
-      }
-    });
-    setInterval(updateRadarHud, 1000);
 
     // Live radar product switching via state.json / worker /state (keeps same overlay URL on Yolobox)
     if (window.OverlayState) {

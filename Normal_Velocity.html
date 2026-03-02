@@ -2,24 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Actively Fisting Overlay</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Normal Overlay - Velocity</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="common/ui.css?v=6" />
 
   <style>
-    :root {
-      /* Theme accent (matches map ring) */
-      --tf-accent-rgb: 139, 61, 61; /* #8B3D3D */
-      --panel-bg: rgba(var(--tf-accent-rgb), 0.72);
-      --panel-border: rgba(var(--tf-accent-rgb), 0.95);
-    }
-
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      background: transparent;
       overflow: hidden;
+      background: transparent;
       font-family: Arial, sans-serif;
     }
 
@@ -31,12 +23,6 @@
       display: flex;
       align-items: center;
       gap: 18px;
-      animation: slideIn 1.2s ease-out 2s both;
-    }
-
-    @keyframes slideIn {
-      from { transform: translateX(-60px); opacity: 0; }
-      to   { transform: translateX(0); opacity: 1; }
     }
 
     .logo-inline {
@@ -44,50 +30,25 @@
       opacity: 0.9;
     }
 
-    .text-group { display: none; }
-
     .target-location {
       font-size: 36px;
       font-weight: bold;
       white-space: nowrap;
-      position: relative;
-      z-index: 1;
-      color: white;
-    }
-
-    .target-location::before {
-      content: attr(data-text);
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      color: transparent;
-      background: linear-gradient(30deg, transparent 40%, rgba(255, 0, 0, 0.35) 50%, transparent 60%);
-      background-size: 200% 100%;
-      background-position: 100% 0;
-      -webkit-background-clip: text;
-      background-clip: text;
-      animation: textBeamSweepReverse 4s linear infinite;
-      pointer-events: none;
     }
 
     .gps-meta {
-      color: rgba(255, 255, 255, 0.9);
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 500;
       white-space: nowrap;
-      margin-top: -4px;
     }
 
     .gps-meta.stale {
-      color: rgba(255, 170, 170, 0.95);
+      color: rgba(255, 120, 120, 0.95);
     }
 
     .clock-line {
-      color: rgba(255, 255, 255, 0.9);
       font-size: 16px;
-      font-weight: 700;
+      font-weight: 600;
       white-space: nowrap;
       margin-top: -6px;
       letter-spacing: 0.5px;
@@ -109,28 +70,7 @@
       display: none;
     }
 
-    @keyframes textBeamSweepReverse {
-      0%   { background-position: 100% 0; }
-      100% { background-position: -100% 0; }
-    }
-
-    .social-bar {
-      display: none;
-    }
-
-    .social-bar span {
-      display: inline-flex;
-      align-items: center;
-      font-size: 20px;
-      font-weight: 500;
-    }
-
-    .social-bar img {
-      margin-right: 8px;
-      width: 20px;
-      height: 20px;
-      filter: invert(1);
-    }
+    .social-bar { display: none; }
 
     #map-container {
       width: 350px;
@@ -140,9 +80,9 @@
       position: absolute;
       bottom: 20px;
       right: 20px;
-      border: 4px solid rgba(var(--tf-accent-rgb), 0.95);
+      border: 4px solid rgba(255, 255, 255, 0.10);
       box-shadow:
-        0 0 0 4px rgba(var(--tf-accent-rgb), 0.95),
+        0 0 0 4px rgba(255, 255, 255, 0.10),
         0 0 10px rgba(0, 0, 0, 0.3);
     }
 
@@ -184,11 +124,12 @@
     }
 
     @keyframes pulse-ring {
-      0%   { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-      70%  { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+      70% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
       100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
     }
 
+    /* Donation Banner Styles */
     .support-banner {
       position: fixed;
       top: 20px;
@@ -213,32 +154,33 @@
 
     .support-text {
       font-size: 18px;
-      font-weight: 750;
-      flex: 1 1 auto;
+      font-weight: 700;
       text-align: left;
+      flex: 1 1 auto;
       color: rgba(255, 255, 255, 0.92);
       line-height: 1.25;
     }
 
     @keyframes pulse-glow {
       0%, 100% {
-        box-shadow: 0 0 10px rgba(255, 180, 180, 0.1);
+        box-shadow: 0 0 10px rgba(100, 180, 255, 0.1);
         text-shadow: 0 0 2px rgba(255,255,255,0.4);
       }
       50% {
-        box-shadow: 0 0 16px rgba(255, 180, 180, 0.35);
-        text-shadow: 0 0 6px rgba(255, 180, 180, 0.6);
+        box-shadow: 0 0 16px rgba(100, 180, 255, 0.35);
+        text-shadow: 0 0 6px rgba(100, 180, 255, 0.6);
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- Main Overlay -->
-  <div class="overlay-panel tf-panel tf-radar-sweep">
+  <!-- Static Overlay -->
+  <div class="overlay-panel tf-panel tf-stormglass">
+    <div class="tf-shimmer" aria-hidden="true"></div>
     <img src="fisters_logo.png" class="logo-inline" alt="Logo">
     <div class="tf-col">
-      <div class="tf-title target-location" id="target-text" data-text="ACTIVELY FISTING: ...">ACTIVELY FISTING: ...</div>
+      <div class="tf-title target-location" id="target-text">Target: ...</div>
       <div class="tf-row">
         <div class="tf-meta clock-line" id="clock">--:--:--</div>
         <div class="tf-meta gps-meta" id="gps-meta">GPS: ...</div>
@@ -251,10 +193,20 @@
     </div>
   </div>
 
+  <!-- Map -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div class="tf-legend-ring" id="radar-legend" data-product="bvel" aria-hidden="true"></div>
+    <svg class="tf-legend-labels" id="radar-legend-labels" viewBox="0 0 100 100" aria-hidden="true"></svg>
+    <div class="tf-map-hud" id="radar-hud"><span class="dot"></span><span id="radar-hud-text">VEL (kt) --</span></div>
+    <div class="tf-radar-unavailable" id="radar-unavailable" hidden>Radar unavailable</div>
+  </div>
+
   <!-- Donation Banner -->
-  <div class="support-banner tf-panel tf-radar-sweep" id="donationBanner">
+  <div class="support-banner tf-panel tf-stormglass" id="donationBanner">
+    <div class="tf-shimmer" aria-hidden="true"></div>
     <div class="support-text">
-      Support the chase: grab merch and help keep us in the field.
+      Support the chase: grab merch and help keep us on the road.
     </div>
     <a class="tf-cta" href="https://shop.twisterfisters.com" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -263,21 +215,6 @@
       shop.twisterfisters.com
     </a>
   </div>
-
-  <!-- Map -->
-  <div id="map-container">
-    <div id="map"></div>
-    <div class="tf-legend-ring" id="radar-legend" data-product="bref" aria-hidden="true"></div>
-    <svg class="tf-legend-labels" id="radar-legend-labels" viewBox="0 0 100 100" aria-hidden="true"></svg>
-    <div class="tf-map-hud" id="radar-hud"><span class="dot"></span><span id="radar-hud-text">REF (dBZ) --</span></div>
-    <div class="tf-radar-unavailable" id="radar-unavailable" hidden>Radar unavailable</div>
-  </div>
-
-  <!-- Audio -->
-  <audio id="alert-sound" preload="auto">
-    <source src="impact.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-  </audio>
 
   <!-- Scripts -->
   <script src="common/location.js?v=1"></script>
@@ -319,7 +256,7 @@
 
     const headingMarker = window.OverlayMapOverlays.createHeadingMarker(map);
     const nwsWarnings = window.OverlayMapOverlays.createWarningsLayer(map);
-    const radar = window.OverlayMapOverlays.createRadarLayer(map);
+    const radar = window.OverlayMapOverlays.createRadarLayer(map, { product: 'bvel' });
     radar.init();
 
     // Radar HUD + legend ring
@@ -331,7 +268,7 @@
     let lastRadarTileLoadAt = null;
     let lastRadarTileErrorAt = null;
     let radarInitBeganAt = null;
-    let currentRadarProduct = 'bref';
+    let currentRadarProduct = 'bvel';
 
     function fmtAge(ms) {
       if (ms == null) return '--';
@@ -384,12 +321,7 @@
     });
     setInterval(updateRadarHud, 1000);
 
-    // Live radar product switching via state.json / worker /state (keeps same overlay URL on Yolobox)
-    if (window.OverlayState) {
-      window.OverlayState.startPolling((state) => {
-        if (state && state.radarProduct) radar.setProduct(state.radarProduct);
-      }, 4000);
-    }
+    // NOTE: This overlay is a fixed VEL product (no /state switching).
 
     function formatLatLon(lat, lon) {
       if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon)) {
@@ -434,32 +366,33 @@
     async function updateLocation() {
       try {
         const { lat, lon, location, updatedAt, heading } = await window.OverlayLocation.fetchLocation();
+
         map.setView([lat, lon]);
 
         headingMarker.set(lat, lon, heading);
 
-        const textEl = document.getElementById('target-text');
-        textEl.textContent = `ACTIVELY FISTING: ${location}`;
-        textEl.setAttribute('data-text', `ACTIVELY FISTING: ${location}`);
+        document.getElementById('target-text').innerText = `Target: ${location}`;
         setGpsMeta(updatedAt, lat, lon);
         radar.refresh(lat, lon);
         nwsWarnings.update(lat, lon);
       } catch (e) {
-        console.error("Failed to fetch GPS location:", e);
+        console.error("Failed to fetch location data:", e);
       }
     }
 
     updateLocation();
     setInterval(updateLocation, 10000);
 
-    // Donation banner
+    // Donation Banner
     const banner = document.getElementById('donationBanner');
+
     function cycleBanner() {
       banner.classList.add('visible');
       setTimeout(() => banner.classList.remove('visible'), 15000);
     }
-    cycleBanner();
-    setInterval(cycleBanner, 180000);
+
+    cycleBanner(); // initial
+    setInterval(cycleBanner, 180000); // every 3 minutes
   </script>
 </body>
 </html>

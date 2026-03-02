@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Actively Fisting Overlay</title>
+  <title>We Got Fisted Overlay (Topo Banner Test)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="common/ui.css?v=6" />
+  <link rel="stylesheet" href="common/ui.css" />
 
   <style>
     :root {
       /* Theme accent (matches map ring) */
-      --tf-accent-rgb: 139, 61, 61; /* #8B3D3D */
+      --tf-accent-rgb: 75, 0, 0; /* #4B0000 */
       --panel-bg: rgba(var(--tf-accent-rgb), 0.72);
       --panel-border: rgba(var(--tf-accent-rgb), 0.95);
     }
@@ -23,6 +23,7 @@
       font-family: Arial, sans-serif;
     }
 
+    /* Main Overlay Panel */
     .overlay-panel {
       position: fixed;
       bottom: 20px;
@@ -44,7 +45,12 @@
       opacity: 0.9;
     }
 
-    .text-group { display: none; }
+    .text-group {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+    }
 
     .target-location {
       font-size: 36px;
@@ -63,7 +69,12 @@
       width: 100%;
       height: 100%;
       color: transparent;
-      background: linear-gradient(30deg, transparent 40%, rgba(255, 0, 0, 0.35) 50%, transparent 60%);
+      background: linear-gradient(
+        30deg,
+        transparent 40%,
+        rgba(255, 106, 0, 0.35) 50%,
+        transparent 60%
+      );
       background-size: 200% 100%;
       background-position: 100% 0;
       -webkit-background-clip: text;
@@ -115,7 +126,9 @@
     }
 
     .social-bar {
-      display: none;
+      display: flex;
+      gap: 24px;
+      color: #ffffff;
     }
 
     .social-bar span {
@@ -143,7 +156,7 @@
       border: 4px solid rgba(var(--tf-accent-rgb), 0.95);
       box-shadow:
         0 0 0 4px rgba(var(--tf-accent-rgb), 0.95),
-        0 0 10px rgba(0, 0, 0, 0.3);
+        0 0 10px rgba(75, 0, 0, 0.6);
     }
 
     #map {
@@ -160,7 +173,7 @@
     .pulse {
       width: 12px;
       height: 12px;
-      background-color: #f00;
+      background-color: #FF3C3C;
       border: 2px solid white;
       border-radius: 50%;
       position: absolute;
@@ -173,7 +186,7 @@
     .pulse-ring {
       width: 20px;
       height: 20px;
-      background: rgba(255, 0, 0, 0.5);
+      background: rgba(255, 106, 0, 0.5);
       border-radius: 50%;
       position: absolute;
       top: 50%;
@@ -188,57 +201,15 @@
       70%  { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
       100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
     }
-
-    .support-banner {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: calc(100% - 40px);
-      max-width: 1100px;
-      box-sizing: border-box;
-      flex-wrap: wrap;
-      gap: 16px;
-      opacity: 0;
-      transition: opacity 1s ease-in-out;
-    }
-
-    .support-banner.visible {
-      opacity: 1;
-    }
-
-    .support-text {
-      font-size: 18px;
-      font-weight: 750;
-      flex: 1 1 auto;
-      text-align: left;
-      color: rgba(255, 255, 255, 0.92);
-      line-height: 1.25;
-    }
-
-    @keyframes pulse-glow {
-      0%, 100% {
-        box-shadow: 0 0 10px rgba(255, 180, 180, 0.1);
-        text-shadow: 0 0 2px rgba(255,255,255,0.4);
-      }
-      50% {
-        box-shadow: 0 0 16px rgba(255, 180, 180, 0.35);
-        text-shadow: 0 0 6px rgba(255, 180, 180, 0.6);
-      }
-    }
   </style>
 </head>
 <body>
 
-  <!-- Main Overlay -->
-  <div class="overlay-panel tf-panel tf-radar-sweep">
+  <!-- Static Overlay -->
+  <div class="overlay-panel tf-panel tf-topo-lines">
     <img src="fisters_logo.png" class="logo-inline" alt="Logo">
     <div class="tf-col">
-      <div class="tf-title target-location" id="target-text" data-text="ACTIVELY FISTING: ...">ACTIVELY FISTING: ...</div>
+      <div class="tf-title target-location" id="target-text" data-text="FISTED NEAR: ...">FISTED NEAR: ...</div>
       <div class="tf-row">
         <div class="tf-meta clock-line" id="clock">--:--:--</div>
         <div class="tf-meta gps-meta" id="gps-meta">GPS: ...</div>
@@ -251,10 +222,10 @@
     </div>
   </div>
 
-  <!-- Donation Banner -->
-  <div class="support-banner tf-panel tf-radar-sweep" id="donationBanner">
+  <!-- Merch Banner -->
+  <div class="support-banner tf-panel tf-topo-lines" id="donationBanner">
     <div class="support-text">
-      Support the chase: grab merch and help keep us in the field.
+      Support the chase: grab merch and help us rebuild the rig.
     </div>
     <a class="tf-cta" href="https://shop.twisterfisters.com" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -267,10 +238,6 @@
   <!-- Map -->
   <div id="map-container">
     <div id="map"></div>
-    <div class="tf-legend-ring" id="radar-legend" data-product="bref" aria-hidden="true"></div>
-    <svg class="tf-legend-labels" id="radar-legend-labels" viewBox="0 0 100 100" aria-hidden="true"></svg>
-    <div class="tf-map-hud" id="radar-hud"><span class="dot"></span><span id="radar-hud-text">REF (dBZ) --</span></div>
-    <div class="tf-radar-unavailable" id="radar-unavailable" hidden>Radar unavailable</div>
   </div>
 
   <!-- Audio -->
@@ -284,9 +251,15 @@
   <script src="common/state.js?v=1"></script>
   <script src="common/clock.js?v=1"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="common/map_overlays.js?v=9"></script>
-  <script src="common/legend.js?v=6"></script>
+  <script src="common/map_overlays.js?v=8"></script>
   <script>
+    // Optional impact sound: add `?impactSound=1` to enable.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('impactSound') === '1') {
+      const audio = document.getElementById('alert-sound');
+      audio.play().catch(err => console.warn("Autoplay blocked:", err));
+    }
+
     const map = L.map('map', {
       center: [0, 0],
       zoom: 9,
@@ -322,74 +295,22 @@
     const radar = window.OverlayMapOverlays.createRadarLayer(map);
     radar.init();
 
-    // Radar HUD + legend ring
-    const radarHud = document.getElementById('radar-hud');
-    const radarHudText = document.getElementById('radar-hud-text');
-    const radarLegend = document.getElementById('radar-legend');
-    const radarLegendLabels = document.getElementById('radar-legend-labels');
-    const radarUnavailable = document.getElementById('radar-unavailable');
-    let lastRadarTileLoadAt = null;
-    let lastRadarTileErrorAt = null;
-    let radarInitBeganAt = null;
-    let currentRadarProduct = 'bref';
-
-    function fmtAge(ms) {
-      if (ms == null) return '--';
-      const s = Math.max(0, Math.floor(ms / 1000));
-      const m = Math.floor(s / 60);
-      const r = s % 60;
-      return m > 0 ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
-    }
-
-    function productLabel(p) {
-      if (p === 'n0s') return 'SRV (kt)';
-      if (p === 'n0c') return 'CC (ρhv)';
-      return p === 'bvel' ? 'VEL (kt)' : 'REF (dBZ)';
-    }
-
-    function updateRadarHud() {
-      if (!radarHudText) return;
-      const age = lastRadarTileLoadAt ? (Date.now() - lastRadarTileLoadAt) : null;
-      radarHudText.textContent = `${productLabel(currentRadarProduct)} ${fmtAge(age)}`;
-
-      if (radarHud) {
-        if (age != null && age > 180000) radarHud.classList.add('stale');
-        else radarHud.classList.remove('stale');
-      }
-
-      if (radarLegend) radarLegend.setAttribute('data-product', currentRadarProduct);
-
-      if (radarUnavailable) {
-        const now = Date.now();
-        const hadErrorRecently = lastRadarTileErrorAt && (now - lastRadarTileErrorAt < 120000);
-        const noSuccessYet = !lastRadarTileLoadAt && radarInitBeganAt && (now - radarInitBeganAt > 20000);
-        const unavailable = Boolean(hadErrorRecently || noSuccessYet);
-        radarUnavailable.hidden = !unavailable;
-        if (unavailable) radarUnavailable.textContent = `${productLabel(currentRadarProduct)} unavailable`;
-      }
-    }
-
-    radar.subscribeStatus((s) => {
-      if (!s) return;
-      if (s.product) currentRadarProduct = s.product;
-      if (s.lastTileLoadAt) lastRadarTileLoadAt = s.lastTileLoadAt;
-      if (s.lastTileErrorAt) lastRadarTileErrorAt = s.lastTileErrorAt;
-      if (s.initBeganAt) radarInitBeganAt = s.initBeganAt;
-      updateRadarHud();
-      if (window.OverlayLegend && radarLegend) {
-        const p = s.product || currentRadarProduct;
-        window.OverlayLegend.applyWmsLegendRing({ ringEl: radarLegend, siteId: s.site, product: p });
-        window.OverlayLegend.applyLegendLabels({ svgEl: radarLegendLabels, product: p });
-      }
-    });
-    setInterval(updateRadarHud, 1000);
-
     // Live radar product switching via state.json / worker /state (keeps same overlay URL on Yolobox)
     if (window.OverlayState) {
       window.OverlayState.startPolling((state) => {
         if (state && state.radarProduct) radar.setProduct(state.radarProduct);
       }, 4000);
     }
+
+    // Merch banner cycle (matches other overlays)
+    const banner = document.getElementById('donationBanner');
+    function cycleBanner() {
+      if (!banner) return;
+      banner.classList.add('visible');
+      setTimeout(() => banner.classList.remove('visible'), 15000);
+    }
+    cycleBanner();
+    setInterval(cycleBanner, 180000);
 
     function formatLatLon(lat, lon) {
       if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon)) {
@@ -434,13 +355,14 @@
     async function updateLocation() {
       try {
         const { lat, lon, location, updatedAt, heading } = await window.OverlayLocation.fetchLocation();
+
         map.setView([lat, lon]);
 
         headingMarker.set(lat, lon, heading);
 
         const textEl = document.getElementById('target-text');
-        textEl.textContent = `ACTIVELY FISTING: ${location}`;
-        textEl.setAttribute('data-text', `ACTIVELY FISTING: ${location}`);
+        textEl.textContent = `FISTED NEAR: ${location}`;
+        textEl.setAttribute('data-text', `FISTED NEAR: ${location}`);
         setGpsMeta(updatedAt, lat, lon);
         radar.refresh(lat, lon);
         nwsWarnings.update(lat, lon);
@@ -451,15 +373,6 @@
 
     updateLocation();
     setInterval(updateLocation, 10000);
-
-    // Donation banner
-    const banner = document.getElementById('donationBanner');
-    function cycleBanner() {
-      banner.classList.add('visible');
-      setTimeout(() => banner.classList.remove('visible'), 15000);
-    }
-    cycleBanner();
-    setInterval(cycleBanner, 180000);
   </script>
 </body>
 </html>

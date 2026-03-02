@@ -1,0 +1,15 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/
+.python-version
+node_modules/
+
+# Local overlay state (not meant to be committed)
+state.json
+location.json
+
+# Debug / scrape artifacts created during development
+tmp_*
+

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Actively Fisting Overlay</title>
+  <title>Fisting Overlay - Correlation Coefficient</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="common/ui.css?v=6" />
@@ -267,9 +267,9 @@
   <!-- Map -->
   <div id="map-container">
     <div id="map"></div>
-    <div class="tf-legend-ring" id="radar-legend" data-product="bref" aria-hidden="true"></div>
+    <div class="tf-legend-ring" id="radar-legend" data-product="n0c" aria-hidden="true"></div>
     <svg class="tf-legend-labels" id="radar-legend-labels" viewBox="0 0 100 100" aria-hidden="true"></svg>
-    <div class="tf-map-hud" id="radar-hud"><span class="dot"></span><span id="radar-hud-text">REF (dBZ) --</span></div>
+    <div class="tf-map-hud" id="radar-hud"><span class="dot"></span><span id="radar-hud-text">CC (ρhv) --</span></div>
     <div class="tf-radar-unavailable" id="radar-unavailable" hidden>Radar unavailable</div>
   </div>
 
@@ -284,7 +284,7 @@
   <script src="common/state.js?v=1"></script>
   <script src="common/clock.js?v=1"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="common/map_overlays.js?v=9"></script>
+  <script src="common/map_overlays.js?v=10"></script>
   <script src="common/legend.js?v=6"></script>
   <script>
     const map = L.map('map', {
@@ -319,7 +319,7 @@
 
     const headingMarker = window.OverlayMapOverlays.createHeadingMarker(map);
     const nwsWarnings = window.OverlayMapOverlays.createWarningsLayer(map);
-    const radar = window.OverlayMapOverlays.createRadarLayer(map);
+    const radar = window.OverlayMapOverlays.createRadarLayer(map, { provider: 'thredds_cc', product: 'n0c' });
     radar.init();
 
     // Radar HUD + legend ring
@@ -331,7 +331,7 @@
     let lastRadarTileLoadAt = null;
     let lastRadarTileErrorAt = null;
     let radarInitBeganAt = null;
-    let currentRadarProduct = 'bref';
+    let currentRadarProduct = 'n0c';
 
     function fmtAge(ms) {
       if (ms == null) return '--';
@@ -384,12 +384,7 @@
     });
     setInterval(updateRadarHud, 1000);
 
-    // Live radar product switching via state.json / worker /state (keeps same overlay URL on Yolobox)
-    if (window.OverlayState) {
-      window.OverlayState.startPolling((state) => {
-        if (state && state.radarProduct) radar.setProduct(state.radarProduct);
-      }, 4000);
-    }
+    // NOTE: This overlay is a fixed CC product (no /state switching).
 
     function formatLatLon(lat, lon) {
       if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon)) {
