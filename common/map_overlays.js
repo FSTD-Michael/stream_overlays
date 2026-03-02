@@ -112,7 +112,8 @@
 
     const layer = L.geoJSON(null, {
       style: (feature) => {
-        const event = (feature && feature.properties && feature.properties.event) || "";
+        const props = (feature && feature.properties) ? feature.properties : {};
+        const event = props.event || "";
         const ev = String(event).toLowerCase();
 
         // Defaults
@@ -120,8 +121,21 @@
         let fillColor = "#ffcc00";
 
         if (ev.includes("tornado")) {
-          color = "#ff1a1a";
-          fillColor = "#ff1a1a";
+          const headline = String(props.headline || "").toLowerCase();
+          const desc = String(props.description || "").toLowerCase();
+          const blob = `${headline}\n${desc}`;
+
+          // Base TOR = red, but PDS/TORE get special colors
+          if (blob.includes("tornado emergency")) {
+            color = "#ff4bd1";     // bright pink
+            fillColor = "#ff4bd1";
+          } else if (blob.includes("particularly dangerous situation")) {
+            color = "#b77bff";     // muted purple-pink
+            fillColor = "#b77bff";
+          } else {
+            color = "#ff1a1a";
+            fillColor = "#ff1a1a";
+          }
         } else if (ev.includes("severe thunderstorm")) {
           color = "#ffcc00";
           fillColor = "#ffcc00";
@@ -148,8 +162,14 @@
     const minIntervalMs = 60000;
 
     const status = {
-      inside: null, // 'tor' | 'svr' | null
-      near: null,   // 'tor' | 'svr' | null  (approx within N miles)
+      // inside / near values:
+      // - 'svr'  (Severe Thunderstorm Warning)
+      // - 'tor'  (Tornado Warning)
+      // - 'torc' (Confirmed Tornado Warning)
+      // - 'pds'  (PDS Tornado Warning)
+      // - 'tore' (Tornado Emergency)
+      inside: null,
+      near: null,   // approx within N miles (see updateProximity)
       insideAt: null,
       nearAt: null,
     };
@@ -158,8 +178,29 @@
       const feats = (data && data.features) ? data.features : [];
       let sawSvr = false;
       for (const f of feats) {
-        const ev = String((f && f.properties && f.properties.event) || "").toLowerCase();
-        if (ev.includes("tornado warning")) return "tor";
+        const props = (f && f.properties) ? f.properties : {};
+        const ev = String(props.event || "").toLowerCase();
+
+        // Tornado warnings get sub-typed by headline/description text.
+        if (ev.includes("tornado warning")) {
+          const headline = String(props.headline || "").toLowerCase();
+          const desc = String(props.description || "").toLowerCase();
+          const blob = `${headline}\n${desc}`;
+
+          if (blob.includes("tornado emergency")) return "tore";
+          if (blob.includes("particularly dangerous situation")) return "pds";
+
+          // “Confirmed” wording varies; require tornado context to avoid false positives.
+          const confirmed =
+            (blob.includes("confirmed") && blob.includes("tornado")) ||
+            blob.includes("confirmed tornado") ||
+            blob.includes("tornado is confirmed") ||
+            blob.includes("tornado...confirmed");
+          if (confirmed) return "torc";
+
+          return "tor";
+        }
+
         if (ev.includes("severe thunderstorm warning")) sawSvr = true;
       }
       return sawSvr ? "svr" : null;
@@ -233,8 +274,8 @@
         let sawSvr = false;
         for (const data of results) {
           const t = summarizeWarningType(data);
-          if (t === "tor") {
-            status.near = "tor";
+          if (t === "tore" || t === "pds" || t === "torc" || t === "tor") {
+            status.near = t;
             status.nearAt = Date.now();
             return;
           }

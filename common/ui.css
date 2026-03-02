@@ -240,6 +240,16 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.35);
 }
 
+.tf-warn-pill.tf-warn-pds {
+  background: rgba(183, 123, 255, 0.92); /* muted purple-pink */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.tf-warn-pill.tf-warn-tore {
+  background: rgba(255, 75, 209, 0.98); /* bright pink */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
 .tf-cta {
   display: inline-flex;
   align-items: center;

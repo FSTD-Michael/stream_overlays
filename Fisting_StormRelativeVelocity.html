@@ -437,7 +437,7 @@
 
     function setWarnPill(type, near) {
       if (!warnPill) return;
-      warnPill.classList.remove('tf-warn-none', 'tf-warn-svr', 'tf-warn-tor');
+      warnPill.classList.remove('tf-warn-none', 'tf-warn-svr', 'tf-warn-tor', 'tf-warn-pds', 'tf-warn-tore');
       if (!type) {
         warnPill.hidden = true;
         warnPill.textContent = '--';
@@ -445,20 +445,30 @@
         return;
       }
       warnPill.hidden = false;
-      const label = type === 'tor' ? 'Tornado Warning' : 'Severe Thunderstorm Warning';
+      let label = 'Severe Thunderstorm Warning';
+      if (type === 'tore') label = 'Tornado Emergency';
+      else if (type === 'pds') label = 'PDS Tornado Warning';
+      else if (type === 'torc') label = 'Confirmed Tornado Warning';
+      else if (type === 'tor') label = 'Tornado Warning';
       warnPill.textContent = near ? `Near ${label}` : label;
-      warnPill.classList.add(type === 'tor' ? 'tf-warn-tor' : 'tf-warn-svr');
+      if (type === 'tore') warnPill.classList.add('tf-warn-tore');
+      else if (type === 'pds') warnPill.classList.add('tf-warn-pds');
+      else if (type === 'tor' || type === 'torc') warnPill.classList.add('tf-warn-tor');
+      else warnPill.classList.add('tf-warn-svr');
     }
 
     function updateWarnFromStatus() {
       if (testWarnRaw === 'tor' || testWarnRaw === 'tornado') return setWarnPill('tor', testWarnNear);
+      if (testWarnRaw === 'torc' || testWarnRaw === 'confirmed') return setWarnPill('torc', testWarnNear);
+      if (testWarnRaw === 'pds') return setWarnPill('pds', testWarnNear);
+      if (testWarnRaw === 'tore' || testWarnRaw === 'emergency') return setWarnPill('tore', testWarnNear);
       if (testWarnRaw === 'svr' || testWarnRaw === 'severe') return setWarnPill('svr', testWarnNear);
       if (testWarnRaw === 'none' || testWarnRaw === 'off') return setWarnPill(null, false);
 
       if (!nwsWarnings || !nwsWarnings.getStatus) return setWarnPill(null, false);
       const st = nwsWarnings.getStatus();
-      if (st && (st.inside === 'tor' || st.inside === 'svr')) return setWarnPill(st.inside, false);
-      if (st && (st.near === 'tor' || st.near === 'svr')) return setWarnPill(st.near, true);
+      if (st && st.inside) return setWarnPill(st.inside, false);
+      if (st && st.near) return setWarnPill(st.near, true);
       return setWarnPill(null, false);
     }
 
