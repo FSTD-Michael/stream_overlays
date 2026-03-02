@@ -213,6 +213,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  top: -1px;
   padding: 6px 10px;
   border-radius: 8px;
   border: 2px solid rgba(0, 0, 0, 0.55);
