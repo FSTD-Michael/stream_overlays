@@ -195,6 +195,16 @@
   white-space: nowrap;
 }
 
+.tf-chip-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tf-chip-link:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
 .tf-chip img {
   width: 16px;
   height: 16px;
