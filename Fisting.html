@@ -285,7 +285,7 @@
   <!-- Scripts -->
   <script src="common/location.js?v=2"></script>
   <script src="common/state.js?v=1"></script>
-  <script src="common/clock.js?v=1"></script>
+  <script src="common/clock.js?v=2"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="common/map_overlays.js?v=10"></script>
   <script src="common/legend.js?v=7"></script>
@@ -444,12 +444,12 @@
       if (!warnPill) return;
       warnPill.classList.remove('tf-warn-none', 'tf-warn-svr', 'tf-warn-tor', 'tf-warn-pds', 'tf-warn-tore');
       if (!type) {
-        warnPill.hidden = true;
-        warnPill.textContent = '--';
+        warnPill.style.display = 'none';
+        warnPill.textContent = '';
         warnPill.classList.add('tf-warn-none');
         return;
       }
-      warnPill.hidden = false;
+      warnPill.style.display = 'inline-flex';
       let label = 'Severe Thunderstorm Warning';
       if (type === 'tore') label = 'Tornado Emergency';
       else if (type === 'pds') label = 'PDS Tornado Warning';
@@ -477,6 +477,9 @@
       if (st && st.near) return setWarnPill(st.near, true);
       return setWarnPill(null, false);
     }
+
+    // Ensure no placeholder box flashes on first paint.
+    setWarnPill(null, false);
 
     async function updateLocation() {
       try {
