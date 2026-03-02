@@ -214,13 +214,12 @@
   align-items: center;
   justify-content: center;
   padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.92);
-  font: 900 12px/1 var(--font);
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
+  border-radius: 8px;
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  color: rgba(0, 0, 0, 0.95);
+  font: 950 12px/1 var(--font);
+  letter-spacing: 0.2px;
+  text-transform: none;
   white-space: nowrap;
   animation: tf-warn-pulse 1.25s ease-in-out infinite;
 }
@@ -230,15 +229,13 @@
 }
 
 .tf-warn-pill.tf-warn-tor {
-  border-color: rgba(255, 26, 26, 0.65);
-  background: rgba(255, 26, 26, 0.18);
-  box-shadow: 0 0 18px rgba(255, 26, 26, 0.25);
+  background: rgba(255, 20, 20, 0.98);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.35);
 }
 
 .tf-warn-pill.tf-warn-svr {
-  border-color: rgba(255, 204, 0, 0.75);
-  background: rgba(255, 204, 0, 0.16);
-  box-shadow: 0 0 18px rgba(255, 204, 0, 0.22);
+  background: rgba(255, 225, 0, 0.98);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.35);
 }
 
 .tf-cta {

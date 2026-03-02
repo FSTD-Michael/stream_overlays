@@ -445,8 +445,8 @@
         return;
       }
       warnPill.hidden = false;
-      const label = type === 'tor' ? 'TOR' : 'SVR';
-      warnPill.textContent = near ? `${label} NEAR` : label;
+      const label = type === 'tor' ? 'Tornado Warning' : 'Severe Thunderstorm Warning';
+      warnPill.textContent = near ? `Near ${label}` : label;
       warnPill.classList.add(type === 'tor' ? 'tf-warn-tor' : 'tf-warn-svr');
     }
 
