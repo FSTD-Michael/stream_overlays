@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+  <!-- Simple cursor/arrow icon (filled). Keep black so existing CSS invert() makes it white. -->
+  <path fill="#000" d="M4 3l16 9-7 1 4 7-3 2-4-7-4 5V3z"/>
+</svg>

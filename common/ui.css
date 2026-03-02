@@ -198,6 +198,16 @@
 .tf-chip-link {
   text-decoration: none;
   cursor: pointer;
+  color: var(--text);
+}
+
+.tf-chip-link:visited {
+  color: var(--text);
+}
+
+.tf-chip-link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.28);
+  outline-offset: 2px;
 }
 
 .tf-chip-link:hover {
