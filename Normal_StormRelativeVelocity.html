@@ -225,6 +225,11 @@
   <script src="common/map_overlays.js?v=10"></script>
   <script src="common/legend.js?v=7"></script>
   <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetOverride = (urlParams.get('target') || urlParams.get('targetLocation') || urlParams.get('targetText') || '').trim();
+    const targetEl = document.getElementById('target-text');
+    if (targetOverride && targetEl) targetEl.textContent = `Target: ${targetOverride}`;
+
     const map = L.map('map', {
       center: [0, 0],
       zoom: 9,
@@ -369,7 +374,7 @@
 
         headingMarker.set(lat, lon, heading);
 
-        document.getElementById('target-text').innerText = `Target: ${location}`;
+        if (!targetOverride && targetEl) targetEl.textContent = `Target: ${location}`;
         setGpsMeta(updatedAt, lat, lon);
         radar.refresh(lat, lon);
         nwsWarnings.update(lat, lon);

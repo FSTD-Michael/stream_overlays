@@ -42,6 +42,14 @@ You can override the location source per overlay with URL params:
 
 ### Overlay toggles (URL params)
 
+#### Normal overlays: manual Target text (banner only)
+
+On the Normal overlays (`Normal.html`, `Normal_Velocity.html`, `Normal_StormRelativeVelocity.html`) you can override the banner target line without affecting the live GPS/map:
+
+- `?target=Moore, OK`
+
+Fisting overlays always auto-update their banner location from GPS.
+
 - `timeFormat=12h|24h` (default `12h`)
 - `timeZone=America/Chicago` (optional; defaults to device local time)
 - `radar=1|0` (default `1`)
