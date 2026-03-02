@@ -217,8 +217,8 @@
   top: -2px;
   padding: 6px 10px;
   border-radius: 8px;
-  border: 2px solid rgba(0, 0, 0, 0.55);
-  color: rgba(0, 0, 0, 0.95);
+  border: 2px solid rgba(0, 0, 0, 0.60);
+  color: rgba(0, 0, 0, 0.96);
   font: 950 12px/1 var(--font);
   letter-spacing: 0.2px;
   text-transform: none;
@@ -241,13 +241,27 @@
 }
 
 .tf-warn-pill.tf-warn-pds {
-  background: rgba(183, 123, 255, 0.92); /* muted purple-pink */
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.35);
+  /* PDS: neon purple that pops hard */
+  background: linear-gradient(180deg, rgba(206, 86, 255, 0.98), rgba(140, 40, 255, 0.98));
+  border-color: rgba(0, 0, 0, 0.70);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.28),
+    0 0 26px rgba(186, 70, 255, 0.60),
+    0 14px 28px rgba(0, 0, 0, 0.42);
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55), 0 0 10px rgba(0, 0, 0, 0.25);
 }
 
 .tf-warn-pill.tf-warn-tore {
-  background: rgba(255, 75, 209, 0.98); /* bright pink */
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.35);
+  /* TORE: hot pink / magenta that screams */
+  background: linear-gradient(180deg, rgba(255, 25, 198, 0.99), rgba(255, 0, 128, 0.99));
+  border-color: rgba(0, 0, 0, 0.75);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.30),
+    0 0 30px rgba(255, 0, 170, 0.70),
+    0 16px 30px rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.58), 0 0 12px rgba(0, 0, 0, 0.25);
 }
 
 .tf-cta {
