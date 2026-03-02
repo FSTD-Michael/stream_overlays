@@ -221,7 +221,7 @@
   <!-- Scripts -->
   <script src="common/location.js?v=2"></script>
   <script src="common/state.js?v=1"></script>
-  <script src="common/clock.js?v=2"></script>
+  <script src="common/clock.js?v=3"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="common/map_overlays.js?v=10"></script>
   <script src="common/legend.js?v=7"></script>
@@ -370,6 +370,10 @@
     async function updateLocation() {
       try {
         const { lat, lon, location, updatedAt, heading } = await window.OverlayLocation.fetchLocation();
+
+        if (window.OverlayClock && window.OverlayClock.updateTimeZoneFromLatLon) {
+          window.OverlayClock.updateTimeZoneFromLatLon(lat, lon);
+        }
 
         map.setView([lat, lon]);
 
