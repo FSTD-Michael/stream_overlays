@@ -144,7 +144,36 @@
     }).addTo(map);
 
     let lastFetchMs = 0;
+    let lastProxFetchMs = 0;
     const minIntervalMs = 60000;
+
+    const status = {
+      inside: null, // 'tor' | 'svr' | null
+      near: null,   // 'tor' | 'svr' | null  (approx within N miles)
+      insideAt: null,
+      nearAt: null,
+    };
+
+    function summarizeWarningType(data) {
+      const feats = (data && data.features) ? data.features : [];
+      let sawSvr = false;
+      for (const f of feats) {
+        const ev = String((f && f.properties && f.properties.event) || "").toLowerCase();
+        if (ev.includes("tornado warning")) return "tor";
+        if (ev.includes("severe thunderstorm warning")) sawSvr = true;
+      }
+      return sawSvr ? "svr" : null;
+    }
+
+    async function fetchAlertsAt(lat, lon) {
+      const url = `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: { Accept: "application/geo+json" },
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    }
 
     async function update(lat, lon) {
       const now = Date.now();
@@ -152,21 +181,77 @@
       lastFetchMs = now;
 
       try {
-        const url = `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
-        const res = await fetch(url, {
-          cache: "no-store",
-          headers: { Accept: "application/geo+json" },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await fetchAlertsAt(lat, lon);
+        if (!data) return;
         layer.clearLayers();
         if (data) layer.addData(data);
+        status.inside = summarizeWarningType(data);
+        status.insideAt = Date.now();
+        if (status.inside) {
+          status.near = null;
+          status.nearAt = null;
+        }
       } catch {
         // ignore
       }
     }
 
-    return { update };
+    async function updateProximity(lat, lon, miles = 10) {
+      const now = Date.now();
+      if (now - lastProxFetchMs < minIntervalMs) return;
+      lastProxFetchMs = now;
+
+      // If we're already inside a warning polygon, no need for proximity checking.
+      if (status.inside) {
+        status.near = null;
+        status.nearAt = null;
+        return;
+      }
+
+      const m = Math.max(0, Number(miles) || 0);
+      if (m <= 0) {
+        status.near = null;
+        status.nearAt = null;
+        return;
+      }
+
+      // Approximate: query the NWS point endpoint at 4 cardinal points N/S/E/W at `m` miles.
+      // If any point is inside TOR/SVR, treat as "near" for the center point.
+      const km = m * 1.60934;
+      const dLat = km / 111.0;
+      const cos = Math.cos((lat * Math.PI) / 180);
+      const dLon = km / (111.0 * Math.max(0.2, cos));
+
+      try {
+        const pts = [
+          [lat + dLat, lon],
+          [lat - dLat, lon],
+          [lat, lon + dLon],
+          [lat, lon - dLon],
+        ];
+        const results = await Promise.all(pts.map(([a, b]) => fetchAlertsAt(a, b).catch(() => null)));
+        let sawSvr = false;
+        for (const data of results) {
+          const t = summarizeWarningType(data);
+          if (t === "tor") {
+            status.near = "tor";
+            status.nearAt = Date.now();
+            return;
+          }
+          if (t === "svr") sawSvr = true;
+        }
+        status.near = sawSvr ? "svr" : null;
+        status.nearAt = Date.now();
+      } catch {
+        // ignore
+      }
+    }
+
+    function getStatus() {
+      return { ...status };
+    }
+
+    return { update, updateProximity, getStatus };
   }
 
   function createRadarLayer(map, opts = {}) {

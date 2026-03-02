@@ -173,12 +173,13 @@
       <div class="tf-row">
         <div class="tf-meta clock-line" id="clock">--:--:--</div>
         <div class="tf-meta gps-meta" id="gps-meta">GPS: ...</div>
+        <div class="tf-warn-pill tf-warn-none" id="warn-pill" hidden>--</div>
       </div>
       <div class="tf-chipbar">
-        <a class="tf-chip tf-chip-link" href="https://x.com/twisterfisters" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/x.svg" alt="X" />@twisterfisters</a>
-        <a class="tf-chip tf-chip-link" href="https://youtube.com/@twisterfisters" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube" />@twisterfisters</a>
-        <a class="tf-chip tf-chip-link" href="https://instagram.com/twisterfisters" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram" />@twisterfisters</a>
-        <a class="tf-chip tf-chip-link" href="https://twisterfisters.com" target="_blank" rel="noopener noreferrer"><img src="common/cursor.svg" alt="Web" />twisterfisters.com</a>
+        <span class="tf-chip"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/x.svg" alt="X" />@twisterfisters</span>
+        <span class="tf-chip"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube" />@twisterfisters</span>
+        <span class="tf-chip"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram" />@twisterfisters</span>
+        <span class="tf-chip"><img src="common/cursor.svg" alt="Web" />twisterfisters.com</span>
       </div>
     </div>
   </div>
@@ -327,6 +328,40 @@
       }
     }
 
+    // Warning pill (TOR/SVR) near the GPS line.
+    const warnPill = document.getElementById('warn-pill');
+    const warnParams = new URLSearchParams(window.location.search);
+    const warnMiles = Number(warnParams.get('warnMiles') || 10);
+    const testWarnRaw = String(warnParams.get('testWarn') || warnParams.get('testWarning') || '').toLowerCase();
+    const testWarnNear = String(warnParams.get('testWarnNear') || '0') === '1';
+
+    function setWarnPill(type, near) {
+      if (!warnPill) return;
+      warnPill.classList.remove('tf-warn-none', 'tf-warn-svr', 'tf-warn-tor');
+      if (!type) {
+        warnPill.hidden = true;
+        warnPill.textContent = '--';
+        warnPill.classList.add('tf-warn-none');
+        return;
+      }
+      warnPill.hidden = false;
+      const label = type === 'tor' ? 'TOR' : 'SVR';
+      warnPill.textContent = near ? `${label} NEAR` : label;
+      warnPill.classList.add(type === 'tor' ? 'tf-warn-tor' : 'tf-warn-svr');
+    }
+
+    function updateWarnFromStatus() {
+      if (testWarnRaw === 'tor' || testWarnRaw === 'tornado') return setWarnPill('tor', testWarnNear);
+      if (testWarnRaw === 'svr' || testWarnRaw === 'severe') return setWarnPill('svr', testWarnNear);
+      if (testWarnRaw === 'none' || testWarnRaw === 'off') return setWarnPill(null, false);
+
+      if (!nwsWarnings || !nwsWarnings.getStatus) return setWarnPill(null, false);
+      const st = nwsWarnings.getStatus();
+      if (st && (st.inside === 'tor' || st.inside === 'svr')) return setWarnPill(st.inside, false);
+      if (st && (st.near === 'tor' || st.near === 'svr')) return setWarnPill(st.near, true);
+      return setWarnPill(null, false);
+    }
+
     const banner = document.getElementById('donationBanner');
     function cycleBanner() {
       banner.classList.add('visible');
@@ -348,6 +383,8 @@
         setGpsMeta(updatedAt, lat, lon);
         radar.refresh(lat, lon);
         nwsWarnings.update(lat, lon);
+        if (nwsWarnings.updateProximity) nwsWarnings.updateProximity(lat, lon, warnMiles);
+        updateWarnFromStatus();
       } catch (e) {
         console.error("Failed to fetch GPS location:", e);
       }
