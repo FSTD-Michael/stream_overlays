@@ -169,6 +169,7 @@
   color: var(--muted);
   font-weight: 600;
   letter-spacing: 0.2px;
+  line-height: 1;
 }
 
 .tf-meta.stale {
