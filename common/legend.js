@@ -40,7 +40,6 @@
     if (v === "n0q" || v.includes("n0q")) return "n0q";
     if (v === "n0u" || v.includes("n0u")) return "n0u";
     if (v === "n0s" || v.includes("n0s") || v.includes("srv") || v.includes("storm")) return "n0s";
-    if (v === "n0c" || v.includes("n0c") || v.includes("cc") || v.includes("rho") || v.includes("corr")) return "n0c";
     return v.includes("vel") ? "bvel" : "bref";
   }
 
@@ -138,59 +137,7 @@
     }
   }
 
-  function renderCcArcLabels(svgEl) {
-    if (!svgEl) return;
-    clearSvg(svgEl);
-
-    const start = 120;
-    const end = 240;
-    const span = end - start;
-    // Correlation coefficient (ρhv) commonly plotted 0–1. Keep labels readable.
-    const min = 0.5;
-    const max = 1.0;
-    const labels = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-
-    const center = 50;
-    const rText = 49.55;
-
-    for (const v of labels) {
-      const tRaw = (v - min) / (max - min);
-      const t = 1 - tRaw;
-      const deg = start + t * span;
-      const rad = degToSvgRad(deg);
-
-      const xt = center + rText * Math.cos(rad);
-      const yt = center + rText * Math.sin(rad);
-      const text = addSvgEl(svgEl, "text", {
-        x: xt,
-        y: yt,
-        "text-anchor": "middle",
-        "dominant-baseline": "text-after-edge",
-      });
-      text.setAttribute("transform", `rotate(${(deg + 180).toFixed(2)} ${xt.toFixed(2)} ${yt.toFixed(2)})`);
-      text.textContent = String(v);
-    }
-  }
-
-  function gradientForPalette(colorsLowToHigh) {
-    const inverted = colorsLowToHigh.slice().reverse();
-    return buildBottomArcConicGradientStepped(inverted);
-  }
-
-  function ccPalette() {
-    // Clean discrete ρhv ramp (low=cool/dark, high=warm/bright)
-    return [
-      "rgba(20, 20, 20, 1)",
-      "rgba(40, 0, 80, 1)",
-      "rgba(0, 70, 140, 1)",
-      "rgba(0, 160, 170, 1)",
-      "rgba(0, 200, 80, 1)",
-      "rgba(220, 220, 60, 1)",
-      "rgba(255, 150, 30, 1)",
-      "rgba(255, 70, 70, 1)",
-      "rgba(255, 110, 200, 1)",
-    ];
-  }
+  // (CC/rhoHV removed; full-screen radar is used for CC now.)
 
   function buildBottomArcConicGradientStepped(colors) {
     // Map colors across the bottom third (120deg -> 240deg)
@@ -337,12 +284,6 @@
       return;
     }
 
-    if (prod === "n0c") {
-      ringEl.style.setProperty("--tf-legend-gradient", gradientForPalette(ccPalette()));
-      ringEl.setAttribute("data-product", prod);
-      return;
-    }
-
     const layerName = layerNameFor(siteId, prod);
     if (!layerName) return;
 
@@ -360,7 +301,6 @@
     const prod = normalizeProduct(product);
     if (prod === "bref") renderDbzArcLabels(svgEl);
     else if (prod === "bvel" || prod === "n0u" || prod === "n0s") renderVelArcLabels(svgEl);
-    else if (prod === "n0c") renderCcArcLabels(svgEl);
     else clearSvg(svgEl);
   }
 

@@ -5,7 +5,7 @@
   <title>We Got Fisted Overlay</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="common/ui.css?v=6" />
+  <link rel="stylesheet" href="common/ui.css?v=7" />
 
   <style>
     :root {
@@ -224,6 +224,7 @@
 
   <!-- Merch Banner -->
   <div class="support-banner tf-panel tf-radar-sweep" id="donationBanner">
+    <img class="tf-shop-qr" src="common/shop_qr.svg" alt="Merch QR code" />
     <div class="support-text">
       Support the chase: grab merch and help us rebuild the rig.
     </div>
@@ -251,12 +252,12 @@
   </audio>
 
   <!-- Scripts -->
-  <script src="common/location.js?v=1"></script>
+  <script src="common/location.js?v=2"></script>
   <script src="common/state.js?v=1"></script>
   <script src="common/clock.js?v=1"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="common/map_overlays.js?v=9"></script>
-  <script src="common/legend.js?v=6"></script>
+  <script src="common/map_overlays.js?v=10"></script>
+  <script src="common/legend.js?v=7"></script>
   <script>
     // Optional impact sound: add `?impactSound=1` to enable.
     const params = new URLSearchParams(window.location.search);
@@ -375,8 +376,8 @@
       if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon)) {
         return null;
       }
-      const latAbs = Math.abs(lat).toFixed(5);
-      const lonAbs = Math.abs(lon).toFixed(5);
+      const latAbs = Math.abs(lat).toFixed(2);
+      const lonAbs = Math.abs(lon).toFixed(2);
       const latHem = lat >= 0 ? 'N' : 'S';
       const lonHem = lon >= 0 ? 'E' : 'W';
       return `${latAbs}${latHem}, ${lonAbs}${lonHem}`;

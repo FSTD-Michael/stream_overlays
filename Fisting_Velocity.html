@@ -5,7 +5,7 @@
   <title>Actively Fisting Overlay (Velocity)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="common/ui.css?v=6" />
+  <link rel="stylesheet" href="common/ui.css?v=7" />
 
   <style>
     :root {
@@ -183,6 +183,7 @@
   </div>
 
   <div class="support-banner tf-panel tf-radar-sweep" id="donationBanner">
+    <img class="tf-shop-qr" src="common/shop_qr.svg" alt="Merch QR code" />
     <div class="support-text">
       Support the chase: grab merch and help keep us in the field.
     </div>
@@ -202,11 +203,11 @@
     <div class="tf-radar-unavailable" id="radar-unavailable" hidden>Radar unavailable</div>
   </div>
 
-  <script src="common/location.js?v=1"></script>
+  <script src="common/location.js?v=2"></script>
   <script src="common/clock.js?v=1"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="common/map_overlays.js?v=9"></script>
-  <script src="common/legend.js?v=6"></script>
+  <script src="common/map_overlays.js?v=10"></script>
+  <script src="common/legend.js?v=7"></script>
   <script>
     const map = L.map('map', {
       center: [0, 0],
@@ -289,8 +290,8 @@
 
     function formatLatLon(lat, lon) {
       if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-      const latAbs = Math.abs(lat).toFixed(5);
-      const lonAbs = Math.abs(lon).toFixed(5);
+      const latAbs = Math.abs(lat).toFixed(2);
+      const lonAbs = Math.abs(lon).toFixed(2);
       const latHem = lat >= 0 ? 'N' : 'S';
       const lonHem = lon >= 0 ? 'E' : 'W';
       return `${latAbs}${latHem}, ${lonAbs}${lonHem}`;

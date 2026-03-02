@@ -177,23 +177,10 @@
     const params = new URLSearchParams(window.location.search);
     const providerParam = (opts.provider || params.get("radarProvider") || "iem_site").toLowerCase();
     // Back-compat: `iem_site` was the old name for OpenGeo single-site WMS.
-    let currentProvider = providerParam === "iem_site" ? "opengeo_site" : providerParam; // opengeo_site | ridge_site | thredds_cc | iem_mosaic | rainviewer
+    let currentProvider = providerParam === "iem_site" ? "opengeo_site" : providerParam; // opengeo_site | ridge_site | iem_mosaic | rainviewer
     const radarSiteOverride = (params.get("radarSite") || "").toUpperCase(); // e.g. KFTG
     const radarStationType = (params.get("radarStationType") || "WSR-88D").toUpperCase();
-    const radarProductParam = (opts.product || params.get("radarProduct") || "bref").toLowerCase(); // bref | bvel | n0q | n0u | n0s | n0c
-    // Optional CORS proxy for THREDDS (defaults to same-origin Worker if locationUrl points at it).
-    let threddsProxyBase = String(opts.threddsProxy || params.get("threddsProxy") || "");
-    if (!threddsProxyBase) {
-      const locationUrlParam = params.get("locationUrl");
-      if (locationUrlParam) {
-        try {
-          const u = new URL(locationUrlParam);
-          threddsProxyBase = `${u.origin}/proxy/thredds`;
-        } catch {
-          // ignore
-        }
-      }
-    }
+    const radarProductParam = (opts.product || params.get("radarProduct") || "bref").toLowerCase(); // bref | bvel | n0q | n0u | n0s
 
     // RainViewer options (used only when radarProvider=rainviewer)
     const radarColor = Math.round(getParamNumber("radarColor", 2)); // RainViewer color scheme (2 looks good on dark basemap)
@@ -201,7 +188,6 @@
     const radarSnow = Math.round(getParamNumber("radarSnow", 0)); // 0/1
     const debug = getParamBool("radarDebug", false);
     let tileLayer = null;
-    let imageLayer = null; // used by thredds_cc
     let lastInitMs = 0;
     let initBeganAt = null;
     let lastSiteId = null;
@@ -216,7 +202,6 @@
       if (v === "n0q" || v.includes("n0q")) return "n0q";
       if (v === "n0u" || v.includes("n0u")) return "n0u";
       if (v === "n0s" || v.includes("n0s") || v.includes("srv") || v.includes("storm")) return "n0s";
-      if (v === "n0c" || v.includes("n0c") || v.includes("cc") || v.includes("rho") || v.includes("corr")) return "n0c";
       if (v.includes("vel") || v === "bvel") return "bvel";
       return "bref";
     }
@@ -231,197 +216,8 @@
       const p = normalizeProduct(product);
       if (p === "n0u" || p === "bvel") return "N0U";
       if (p === "n0s") return "N0S";
-      if (p === "n0c") return "N0C";
       // bref / n0q default
       return "N0Q";
-    }
-
-    function xdrFindDataOffset(buf) {
-      const bytes = new Uint8Array(buf);
-      // ASCII "Data:\n"
-      const marker = [68, 97, 116, 97, 58, 10];
-      for (let i = 0; i < bytes.length - marker.length; i++) {
-        let ok = true;
-        for (let j = 0; j < marker.length; j++) {
-          if (bytes[i + j] !== marker[j]) {
-            ok = false;
-            break;
-          }
-        }
-        if (ok) return i + marker.length;
-      }
-      return -1;
-    }
-
-    function xdrDecodeFloat32Array(buf) {
-      const off = xdrFindDataOffset(buf);
-      if (off < 0) throw new Error("XDR Data marker not found");
-      const view = new DataView(buf, off);
-      const n = view.getInt32(0, false);
-      const n2 = view.getInt32(4, false);
-      if (n <= 0 || n !== n2) throw new Error("Unexpected XDR float array header");
-      const out = new Float32Array(n);
-      let p = 8;
-      for (let i = 0; i < n; i++) {
-        out[i] = view.getFloat32(p, false);
-        p += 4;
-      }
-      return out;
-    }
-
-    function xdrDecodeByteArray(buf) {
-      const off = xdrFindDataOffset(buf);
-      if (off < 0) throw new Error("XDR Data marker not found");
-      const view = new DataView(buf, off);
-      const n = view.getInt32(0, false);
-      const n2 = view.getInt32(4, false);
-      if (n <= 0 || n !== n2) throw new Error("Unexpected XDR byte array header");
-      const rawStart = off + 8;
-      const rawEnd = rawStart + n;
-      return new Uint8Array(buf.slice(rawStart, rawEnd));
-    }
-
-    function ccColorForRho(rho) {
-      // Discrete cool->warm ramp for rhoHV; emphasize 0.5–1.0.
-      if (!Number.isFinite(rho) || rho <= 0) return null;
-      if (rho < 0.5) return null;
-      const t = Math.max(0, Math.min(1, (rho - 0.5) / 0.5));
-      const stops = [
-        [40, 0, 80],
-        [0, 70, 140],
-        [0, 160, 170],
-        [0, 200, 80],
-        [220, 220, 60],
-        [255, 150, 30],
-        [255, 70, 70],
-        [255, 110, 200],
-      ];
-      const idx = Math.min(stops.length - 1, Math.max(0, Math.floor(t * stops.length)));
-      const c = stops[idx];
-      return [c[0], c[1], c[2], 190];
-    }
-
-    async function threddsGetLatestN0CUrlPath(sector3) {
-      const url = `https://thredds.ucar.edu/thredds/radarServer/nexrad/level3/IDD?stn=${encodeURIComponent(sector3)}&var=N0C&time=present`;
-      const fetchUrl = threddsProxyBase ? new URL(threddsProxyBase, window.location.href) : null;
-      const res = await fetch(fetchUrl ? (fetchUrl.searchParams.set("url", url), fetchUrl.toString()) : url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`THREDDS radarServer failed: ${res.status}`);
-      const xml = await res.text();
-      const m = xml.match(/urlPath=\"([^\"]+\\.nids)\"/);
-      if (!m) throw new Error("THREDDS urlPath not found");
-      return m[1];
-    }
-
-    async function threddsFetchDods(path, ce) {
-      const url = `https://thredds.ucar.edu/thredds/dodsC/nexrad/level3/IDD/${path}.dods?${ce}`;
-      const fetchUrl = threddsProxyBase ? new URL(threddsProxyBase, window.location.href) : null;
-      const res = await fetch(fetchUrl ? (fetchUrl.searchParams.set("url", url), fetchUrl.toString()) : url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`THREDDS dods failed: ${res.status}`);
-      return await res.arrayBuffer();
-    }
-
-    async function threddsBuildCCImageOverlay(lat, lon) {
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-      const site = await pickNearestSite(lat, lon);
-      if (!site) return;
-      lastSiteId = site;
-      const sector = sectorFromSite(site);
-
-      const urlPath = await threddsGetLatestN0CUrlPath(sector);
-      if (debug) console.log("[radar] provider:", currentProvider, "site:", lastSiteId, "sector:", sector, "urlPath:", urlPath);
-
-      const [rawBuf, gateBuf, azBuf] = await Promise.all([
-        threddsFetchDods(urlPath, "CorrelationCoefficient_RAW.CorrelationCoefficient_RAW"),
-        threddsFetchDods(urlPath, "gate[0:1:1199]"),
-        threddsFetchDods(urlPath, "azimuth[0:1:359]"),
-      ]);
-
-      const raw = xdrDecodeByteArray(rawBuf);
-      const gate = xdrDecodeFloat32Array(gateBuf);
-      const az = xdrDecodeFloat32Array(azBuf);
-      const gateCount = gate.length || 1200;
-      const azCount = az.length || 360;
-      if (raw.length !== gateCount * azCount) throw new Error(`Unexpected CC raw size: ${raw.length}`);
-
-      const gateStepM = gateCount > 1 ? (gate[1] - gate[0]) : 250;
-      const maxRangeM = gate[gateCount - 1] || (gateStepM * (gateCount - 1));
-      const maxRangeKm = maxRangeM / 1000;
-
-      const dLat = maxRangeKm / 111.0;
-      const dLon = maxRangeKm / (111.0 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
-      const bounds = L.latLngBounds([lat - dLat, lon - dLon], [lat + dLat, lon + dLon]);
-
-      const size = 512;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      const img = ctx.createImageData(size, size);
-      const data = img.data;
-      const cx = size / 2;
-      const cy = size / 2;
-      const rMax = Math.min(cx, cy) - 1;
-
-      const azLut = new Int16Array(360);
-      for (let d = 0; d < 360; d++) azLut[d] = d;
-      for (let i = 0; i < azCount; i++) {
-        const deg = Math.round(((az[i] % 360) + 360) % 360);
-        azLut[deg] = i;
-      }
-
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const dx = x - cx;
-          const dy = y - cy;
-          const r = Math.sqrt(dx * dx + dy * dy);
-          const idx = (y * size + x) * 4;
-
-          if (r > rMax) {
-            data[idx + 3] = 0;
-            continue;
-          }
-
-          const ang = (Math.atan2(dx, -dy) * 180) / Math.PI;
-          const deg = Math.round((ang + 360) % 360);
-          const azIdx = azLut[deg] || 0;
-
-          const rangeM = (r / rMax) * maxRangeM;
-          const gateIdx = Math.max(0, Math.min(gateCount - 1, Math.floor(rangeM / gateStepM)));
-          const v = raw[azIdx * gateCount + gateIdx];
-
-          // Byte -> rho in [0,1]
-          const rho = v / 255.0;
-          const c = ccColorForRho(rho);
-          if (!c) {
-            data[idx + 3] = 0;
-            continue;
-          }
-          data[idx + 0] = c[0];
-          data[idx + 1] = c[1];
-          data[idx + 2] = c[2];
-          data[idx + 3] = c[3];
-        }
-      }
-
-      ctx.putImageData(img, 0, 0);
-
-      const url = canvas.toDataURL("image/png");
-      if (!imageLayer) {
-        imageLayer = L.imageOverlay(url, bounds, { opacity, zIndex: 350 }).addTo(map);
-      } else {
-        imageLayer.setUrl(url);
-        imageLayer.setBounds(bounds);
-        imageLayer.setOpacity(opacity);
-      }
-
-      const el = imageLayer.getElement && imageLayer.getElement();
-      if (el) {
-        el.style.imageRendering = "pixelated";
-        el.style.imageRendering = "crisp-edges";
-      }
-
-      lastTileLoadAt = Date.now();
-      emitStatus();
     }
 
     function haversineKm(lat1, lon1, lat2, lon2) {
@@ -496,10 +292,6 @@
           map.removeLayer(tileLayer);
           tileLayer = null;
         }
-        if (imageLayer) {
-          map.removeLayer(imageLayer);
-          imageLayer = null;
-        }
 
         let tileUrl;
         if (currentProvider === "rainviewer") {
@@ -521,10 +313,6 @@
         } else if (currentProvider === "iem_mosaic") {
           // IEM NEXRAD base reflectivity mosaic (WebMercator / 900913)
           tileUrl = "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png";
-        } else if (currentProvider === "thredds_cc") {
-          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-          await threddsBuildCCImageOverlay(lat, lon);
-          return;
         } else if (currentProvider === "ridge_site") {
           // IEM RIDGE per-radar Level III imagery (tiled WMS).
           // Uses a 3-letter "sector" (e.g. KFTG -> FTG) and a Level III product code (e.g. N0S).
@@ -639,7 +427,7 @@
 
     async function refresh(lat, lon) {
       // If we're in single-site mode, rebuild if the nearest site changes.
-      if (currentProvider === "opengeo_site" || currentProvider === "ridge_site" || currentProvider === "thredds_cc") {
+      if (currentProvider === "opengeo_site" || currentProvider === "ridge_site") {
         const site = radarSiteOverride && radarSiteOverride.length === 4 ? radarSiteOverride : await pickNearestSite(lat, lon);
         if (site && site !== lastSiteId) {
           lastInitMs = 0; // force rebuild

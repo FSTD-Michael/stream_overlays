@@ -11,7 +11,6 @@ This is a simple pattern that works well for public overlays:
 - `PUT /location` -> update JSON (requires `Authorization: Bearer <WRITE_TOKEN>`)
 - `GET /state` -> overlay state (public)
 - `PUT /state` -> update overlay state (requires `Authorization: Bearer <WRITE_TOKEN>`)
-- `GET /proxy/thredds?url=...` -> CORS-safe proxy to `thredds.ucar.edu` (for Correlation Coefficient overlays)
 
 ### Setup (high level)
 
@@ -28,15 +27,6 @@ Point your overlay at the Worker read endpoint:
 - `Normal.html?locationUrl=https://YOUR_WORKER_DOMAIN/location`
 
 Same for `Fisting.html` and `We_Got_Fisted.html`.
-
-### Correlation Coefficient (CC) overlays + CORS
-
-The CC overlays pull data from UCAR THREDDS, which blocks browser origins by default.
-This Worker provides a safe proxy at `GET /proxy/thredds`.
-
-- If you already pass `?locationUrl=https://YOUR_WORKER_DOMAIN/location`, the overlays will **auto-use** `https://YOUR_WORKER_DOMAIN/proxy/thredds`.
-- Otherwise, you can set it explicitly:
-  - `Normal_CorrelationCoefficient.html?threddsProxy=https://YOUR_WORKER_DOMAIN/proxy/thredds`
 
 ### GPS updater usage
 

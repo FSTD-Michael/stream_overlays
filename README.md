@@ -8,17 +8,11 @@ Web-based overlays for storm chase livestreams.
   - `Normal.html`
   - `Fisting.html`
   - `We_Got_Fisted.html`
-- **Banner style comparison (topo test)**:
-  - `Normal_Topo.html`
-  - `Fisting_Topo.html`
-  - `We_Got_Fisted_Topo.html`
 - **Velocity variants (separate Yolobox URLs)**:
   - `Normal_Velocity.html`
   - `Normal_StormRelativeVelocity.html`
-  - `Normal_CorrelationCoefficient.html`
   - `Fisting_Velocity.html`
   - `Fisting_StormRelativeVelocity.html`
-  - `Fisting_CorrelationCoefficient.html`
 - **Assets**:
   - `fisters_logo.png`
   - `impact.mp3`
@@ -81,10 +75,6 @@ Your overlay URLs will then look like:
 - `https://FSTD-Michael.github.io/stream_overlays/Normal.html`
 - `https://FSTD-Michael.github.io/stream_overlays/Fisting.html`
 - `https://FSTD-Michael.github.io/stream_overlays/We_Got_Fisted.html`
-
-For the CC overlays (and to use the built-in THREDDS CORS proxy), make sure you pass your Worker as `locationUrl`:
-
-- `.../Normal_CorrelationCoefficient.html?locationUrl=https://YOUR_WORKER_DOMAIN/location`
 
 ### Running the GPS updater
 

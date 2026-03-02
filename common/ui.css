@@ -227,6 +227,28 @@
   opacity: 0.95;
 }
 
+/* Merch QR (top banner) */
+.tf-shop-qr {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 520px) {
+  .tf-shop-qr {
+    width: 48px;
+    height: 48px;
+    padding: 5px;
+    border-radius: 11px;
+  }
+}
+
 /* Map HUD + Legend Ring */
 .tf-map-hud {
   position: absolute;

@@ -72,59 +72,6 @@ export default {
       return jsonResponse({ ok: true }, { headers: corsHeaders(request, allowOrigin) });
     }
 
-    // CORS-safe proxy for THREDDS (used by CC overlays; THREDDS does not allow arbitrary browser origins).
-    // GET /proxy/thredds?url=https%3A%2F%2Fthredds.ucar.edu%2Fthredds%2F...
-    if (url.pathname === "/proxy/thredds") {
-      if (request.method !== "GET") {
-        return jsonResponse(
-          { error: "method_not_allowed" },
-          { status: 405, headers: corsHeaders(request, allowOrigin) },
-        );
-      }
-
-      const target = url.searchParams.get("url");
-      if (!target) {
-        return jsonResponse(
-          { error: "missing_url" },
-          { status: 400, headers: corsHeaders(request, allowOrigin) },
-        );
-      }
-
-      let u;
-      try {
-        u = new URL(target);
-      } catch {
-        return jsonResponse(
-          { error: "invalid_url" },
-          { status: 400, headers: corsHeaders(request, allowOrigin) },
-        );
-      }
-
-      // Prevent open proxy abuse: allow only THREDDS UCAR, https, and /thredds/*.
-      if (u.protocol !== "https:" || u.hostname !== "thredds.ucar.edu" || !u.pathname.startsWith("/thredds/")) {
-        return jsonResponse(
-          { error: "url_not_allowed" },
-          { status: 403, headers: corsHeaders(request, allowOrigin) },
-        );
-      }
-
-      const upstream = await fetch(u.toString(), {
-        method: "GET",
-        // Keep it simple; THREDDS doesn't require special headers, but a UA helps debugging.
-        headers: { "User-Agent": "stream-overlays-thredds-proxy" },
-      });
-
-      // Pass through body as-is (binary safe), preserve content-type.
-      const ct = upstream.headers.get("content-type") || "application/octet-stream";
-      return new Response(upstream.body, {
-        status: upstream.status,
-        headers: {
-          ...corsHeaders(request, allowOrigin),
-          "Content-Type": ct,
-        },
-      });
-    }
-
     if (url.pathname === "/state") {
       if (request.method === "GET") {
         const raw = await env.LOCATION_KV.get(STATE_KEY);
