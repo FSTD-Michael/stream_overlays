@@ -217,22 +217,41 @@
     }
 
     async function fetchAlertsInBounds(bounds) {
-      // NWS Alerts API doesn't support bbox, so we query multiple points across the map bounds
-      // and combine the results to get all alerts visible in the map area
+      // NWS Alerts API doesn't support bbox, so we use a hybrid approach:
+      // 1. Query multiple points across the bounds (dense grid)
+      // 2. Also try to fetch all active alerts and filter client-side
       const west = bounds.getWest();
       const south = bounds.getSouth();
       const east = bounds.getEast();
       const north = bounds.getNorth();
       
-      // Create a grid of points across the bounds (3x3 grid = 9 points)
-      const latStep = (north - south) / 2;
-      const lonStep = (east - west) / 2;
+      // Create a dense grid of points across the bounds (7x7 grid = 49 points)
+      // This ensures we catch polygons that might be between grid points
+      const gridSize = 6; // 7x7 grid (0-6 inclusive = 7 points per dimension)
+      const latStep = (north - south) / gridSize;
+      const lonStep = (east - west) / gridSize;
       const points = [];
-      for (let i = 0; i <= 2; i++) {
-        for (let j = 0; j <= 2; j++) {
+      
+      // Add grid points
+      for (let i = 0; i <= gridSize; i++) {
+        for (let j = 0; j <= gridSize; j++) {
           points.push([south + i * latStep, west + j * lonStep]);
         }
       }
+      
+      // Also add the center point explicitly
+      const center = bounds.getCenter();
+      points.push([center.lat, center.lng]);
+      
+      // Add corner and edge midpoints to ensure edge coverage
+      points.push([north, west]);
+      points.push([north, east]);
+      points.push([south, west]);
+      points.push([south, east]);
+      points.push([north, (west + east) / 2]); // top edge
+      points.push([south, (west + east) / 2]); // bottom edge
+      points.push([(north + south) / 2, west]); // left edge
+      points.push([(north + south) / 2, east]); // right edge
       
       // Fetch alerts for all points in parallel
       const results = await Promise.all(
@@ -254,7 +273,30 @@
         }
       }
       
-      return { type: "FeatureCollection", features: allFeatures };
+      // Filter features to only include those that intersect the map bounds
+      // This helps catch polygons that are partially visible
+      const filteredFeatures = allFeatures.filter((feature) => {
+        if (!feature.geometry) return false;
+        const geom = feature.geometry;
+        
+        // For polygons, check if any part intersects the bounds
+        if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+          const coords = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+          for (const poly of coords) {
+            for (const ring of poly) {
+              for (const coord of ring) {
+                const [lon, lat] = coord;
+                if (lat >= south && lat <= north && lon >= west && lon <= east) {
+                  return true; // At least one point is in bounds
+                }
+              }
+            }
+          }
+        }
+        return true; // Include other geometry types
+      });
+      
+      return { type: "FeatureCollection", features: filteredFeatures };
     }
 
     async function update(lat, lon) {
