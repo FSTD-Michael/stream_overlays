@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>We Got Fisted Overlay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="common/ui.css?v=7" />
+
+  <style>
+    :root {
+      /* Theme accent (matches map ring) */
+      --tf-accent-rgb: 75, 0, 0; /* #4B0000 */
+      --panel-bg: rgba(var(--tf-accent-rgb), 0.72);
+      --panel-border: rgba(var(--tf-accent-rgb), 0.95);
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Main Overlay Panel */
+    .overlay-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      padding: 20px 30px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      animation: slideIn 1.2s ease-out 2s both;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-60px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+
+    .logo-inline {
+      height: 100px;
+      opacity: 0.9;
+    }
+
+    .text-group {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .target-location {
+      font-size: 36px;
+      font-weight: bold;
+      white-space: nowrap;
+      position: relative;
+      z-index: 1;
+      color: white;
+    }
+
+    .target-location::before {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      color: transparent;
+      background: linear-gradient(
+        30deg,
+        transparent 40%,
+        rgba(255, 106, 0, 0.35) 50%,
+        transparent 60%
+      );
+      background-size: 200% 100%;
+      background-position: 100% 0;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: textBeamSweepReverse 4s linear infinite;
+      pointer-events: none;
+    }
+
+    .gps-meta {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-top: 0;
+    }
+
+    .gps-meta.stale {
+      color: rgba(255, 170, 170, 0.95);
+    }
+
+    .clock-line {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      font-weight: 700;
+      white-space: nowrap;
+      margin-top: 0;
+      letter-spacing: 0.5px;
+    }
+
+    .heading-arrow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 18px solid rgba(255, 255, 255, 0.9);
+      transform: translate(-50%, -65%) rotate(0deg);
+      transform-origin: 50% 80%;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+      z-index: 3;
+      display: none;
+    }
+
+    @keyframes textBeamSweepReverse {
+      0%   { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    .social-bar {
+      display: flex;
+      gap: 24px;
+      color: #ffffff;
+    }
+
+    .social-bar span {
+      display: inline-flex;
+      align-items: center;
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .social-bar img {
+      margin-right: 8px;
+      width: 20px;
+      height: 20px;
+      filter: invert(1);
+    }
+
+    #map-container {
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      overflow: hidden;
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      border: 4px solid rgba(var(--tf-accent-rgb), 0.95);
+      box-shadow:
+        0 0 0 4px rgba(var(--tf-accent-rgb), 0.95),
+        0 0 10px rgba(75, 0, 0, 0.6);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .pulse-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pulse {
+      width: 12px;
+      height: 12px;
+      background-color: #FF3C3C;
+      border: 2px solid white;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+    }
+
+    .pulse-ring {
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 106, 0, 0.5);
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse-ring 2s ease-out infinite;
+      z-index: 1;
+    }
+
+    @keyframes pulse-ring {
+      0%   { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+      70%  { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Test coordinates injection -->
+  <script>
+    (function() {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('testLat')) {
+        url.searchParams.set('testLat', '39.83667');
+        url.searchParams.set('testLon', '-89.81835');
+        url.searchParams.set('testLocation', 'Test Location (39.83667N, 89.81835W)');
+        window.history.replaceState({}, '', url);
+      }
+    })();
+  </script>
+
+  <!-- Static Overlay -->
+  <div class="overlay-panel tf-panel tf-radar-sweep">
+    <img src="fisters_logo.png" class="logo-inline" alt="Logo">
+    <div class="tf-col">
+      <div class="tf-title target-location" id="target-text" data-text="FISTED NEAR: ...">FISTED NEAR: ...</div>
+      <div class="tf-row">
+        <div class="tf-meta clock-line" id="clock">--:--:--</div>
+        <div class="tf-meta gps-meta" id="gps-meta">GPS: ...</div>
+      </div>
+      <div class="tf-chipbar">
+        <span class="tf-chip"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/x.svg" alt="X" />@twisterfisters</span>
+        <span class="tf-chip"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube" />@twisterfisters</span>
+        <span class="tf-chip"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram" />@twisterfisters</span>
+        <span class="tf-chip"><img src="common/cursor.svg" alt="Web" />twisterfisters.com</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Merch Banner -->
+  <div class="support-banner tf-panel tf-radar-sweep" id="donationBanner">
+    <img class="tf-shop-qr" src="common/shop_qr.svg" alt="Merch QR code" />
+    <div class="support-text">
+      Support the chase: grab merch and help us rebuild the rig.
+    </div>
+    <a class="tf-cta" href="https://shop.twisterfisters.com" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 7V6a5 5 0 0 1 10 0v1h2a1 1 0 0 1 1 1l-1 12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 8a1 1 0 0 1 1-1h2Zm2 0h6V6a3 3 0 0 0-6 0v1Zm-2 2 1 11h10l1-11H7Z"/>
+      </svg>
+      shop.twisterfisters.com
+    </a>
+  </div>
+
+  <!-- Map -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div class="tf-legend-ring" id="radar-legend" data-product="bref" aria-hidden="true"></div>
+    <svg class="tf-legend-labels" id="radar-legend-labels" viewBox="0 0 100 100" aria-hidden="true"></svg>
+    <div class="tf-map-hud" id="radar-hud"><span class="dot"></span><span id="radar-hud-text">REF (dBZ) --</span></div>
+    <div class="tf-radar-unavailable" id="radar-unavailable" hidden>Radar unavailable</div>
+  </div>
+
+  <!-- Audio -->
+  <audio id="alert-sound" preload="auto">
+    <source src="impact.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+  <!-- Scripts -->
+  <script src="common/location.js?v=2"></script>
+  <script src="common/state.js?v=1"></script>
+  <script src="common/clock.js?v=3"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="common/map_overlays.js?v=10"></script>
+  <script src="common/legend.js?v=7"></script>
+  <script>
+    // Optional impact sound: add `?impactSound=1` to enable.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('impactSound') === '1') {
+      const audio = document.getElementById('alert-sound');
+      audio.play().catch(err => console.warn("Autoplay blocked:", err));
+    }
+
+    const map = L.map('map', {
+      center: [0, 0],
+      zoom: 9,
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      tap: false,
+      touchZoom: false
+    });
+
+    window.OverlayMapOverlays.addDarkBasemap(map);
+
+    const pulseIcon = L.divIcon({
+      className: '',
+      html: `
+        <div class="pulse-wrapper">
+          <div class="pulse-ring"></div>
+          <div class="pulse"></div>
+        </div>
+      `,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+
+    window.OverlayClock.startClock('clock');
+
+    const headingMarker = window.OverlayMapOverlays.createHeadingMarker(map);
+    const nwsWarnings = window.OverlayMapOverlays.createWarningsLayer(map);
+    const radar = window.OverlayMapOverlays.createRadarLayer(map, { provider: 'opengeo_site', product: 'bref' });
+    radar.init();
+
+    // Radar HUD + legend ring
+    const radarHud = document.getElementById('radar-hud');
+    const radarHudText = document.getElementById('radar-hud-text');
+    const radarLegend = document.getElementById('radar-legend');
+    const radarLegendLabels = document.getElementById('radar-legend-labels');
+    let lastRadarTileLoadAt = null;
+    let lastRadarTileErrorAt = null;
+    let radarInitBeganAt = null;
+    const radarUnavailable = document.getElementById('radar-unavailable');
+    // Lock We_Got_Fisted overlay to reflectivity only.
+    const currentRadarProduct = 'bref';
+
+    function fmtAge(ms) {
+      if (ms == null) return '--';
+      const s = Math.max(0, Math.floor(ms / 1000));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return m > 0 ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
+    }
+
+    function productLabel() {
+      return 'REF (dBZ)';
+    }
+
+    function updateRadarHud() {
+      if (!radarHudText) return;
+      const age = lastRadarTileLoadAt ? (Date.now() - lastRadarTileLoadAt) : null;
+      radarHudText.textContent = `${productLabel()} ${fmtAge(age)}`;
+
+      if (radarHud) {
+        if (age != null && age > 180000) radarHud.classList.add('stale');
+        else radarHud.classList.remove('stale');
+      }
+
+      if (radarLegend) radarLegend.setAttribute('data-product', currentRadarProduct);
+
+      if (radarUnavailable) {
+        const now = Date.now();
+        const hadErrorRecently = lastRadarTileErrorAt && (now - lastRadarTileErrorAt < 120000);
+        const noSuccessYet = !lastRadarTileLoadAt && radarInitBeganAt && (now - radarInitBeganAt > 20000);
+        const unavailable = Boolean(hadErrorRecently || noSuccessYet);
+        radarUnavailable.hidden = !unavailable;
+        if (unavailable) radarUnavailable.textContent = `${productLabel()} unavailable`;
+      }
+    }
+
+    radar.subscribeStatus((s) => {
+      if (!s) return;
+      if (s.lastTileLoadAt) lastRadarTileLoadAt = s.lastTileLoadAt;
+      if (s.lastTileErrorAt) lastRadarTileErrorAt = s.lastTileErrorAt;
+      if (s.initBeganAt) radarInitBeganAt = s.initBeganAt;
+      updateRadarHud();
+      if (window.OverlayLegend && radarLegend) {
+        window.OverlayLegend.applyWmsLegendRing({ ringEl: radarLegend, siteId: s.site, product: currentRadarProduct });
+        window.OverlayLegend.applyLegendLabels({ svgEl: radarLegendLabels, product: currentRadarProduct });
+      }
+    });
+    setInterval(updateRadarHud, 1000);
+
+    // NOTE: No /state radar switching for this overlay.
+
+    // Merch banner cycle (matches other overlays)
+    const banner = document.getElementById('donationBanner');
+    function cycleBanner() {
+      if (!banner) return;
+      banner.classList.add('visible');
+      setTimeout(() => banner.classList.remove('visible'), 15000);
+    }
+    cycleBanner();
+    setInterval(cycleBanner, 180000);
+
+    function formatLatLon(lat, lon) {
+      if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+        return null;
+      }
+      const latAbs = Math.abs(lat).toFixed(2);
+      const lonAbs = Math.abs(lon).toFixed(2);
+      const latHem = lat >= 0 ? 'N' : 'S';
+      const lonHem = lon >= 0 ? 'E' : 'W';
+      return `${latAbs}${latHem}, ${lonAbs}${lonHem}`;
+    }
+
+    function setGpsMeta(updatedAt, lat, lon) {
+      const el = document.getElementById('gps-meta');
+      if (!el) return;
+      const coords = formatLatLon(lat, lon);
+
+      if (!updatedAt) {
+        el.textContent = coords ? `GPS: live | ${coords}` : 'GPS: live';
+        el.classList.remove('stale');
+        return;
+      }
+
+      const t = Date.parse(updatedAt);
+      if (!Number.isFinite(t)) {
+        el.textContent = coords ? `GPS: live | ${coords}` : 'GPS: live';
+        el.classList.remove('stale');
+        return;
+      }
+
+      const ageMs = Date.now() - t;
+      if (ageMs > 30000) {
+        const ageS = Math.max(0, Math.round(ageMs / 1000));
+        el.textContent = coords ? `GPS: stale (${ageS}s) | ${coords}` : `GPS: stale (${ageS}s)`;
+        el.classList.add('stale');
+      } else {
+        el.textContent = coords ? `GPS: live | ${coords}` : 'GPS: live';
+        el.classList.remove('stale');
+      }
+    }
+
+    async function updateLocation() {
+      try {
+        const { lat, lon, location, updatedAt, heading } = await window.OverlayLocation.fetchLocation();
+
+        if (window.OverlayClock && window.OverlayClock.updateTimeZoneFromLatLon) {
+          window.OverlayClock.updateTimeZoneFromLatLon(lat, lon);
+        }
+
+        map.setView([lat, lon]);
+
+        headingMarker.set(lat, lon, heading);
+
+        const textEl = document.getElementById('target-text');
+        textEl.textContent = `FISTED NEAR: ${location}`;
+        textEl.setAttribute('data-text', `FISTED NEAR: ${location}`);
+        setGpsMeta(updatedAt, lat, lon);
+        radar.refresh(lat, lon);
+        nwsWarnings.update(lat, lon);
+      } catch (e) {
+        console.error("Failed to fetch GPS location:", e);
+      }
+    }
+
+    updateLocation();
+    setInterval(updateLocation, 10000);
+  </script>
+</body>
+</html>
