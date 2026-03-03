@@ -216,17 +216,42 @@
       return await res.json();
     }
 
+    async function fetchAlertsInBounds(bounds) {
+      // NWS Alerts API bbox format: west,south,east,north
+      const west = bounds.getWest();
+      const south = bounds.getSouth();
+      const east = bounds.getEast();
+      const north = bounds.getNorth();
+      const url = `https://api.weather.gov/alerts/active?bbox=${west},${south},${east},${north}`;
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: { Accept: "application/geo+json" },
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    }
+
     async function update(lat, lon) {
       const now = Date.now();
       if (now - lastFetchMs < minIntervalMs) return;
       lastFetchMs = now;
 
       try {
-        const data = await fetchAlertsAt(lat, lon);
-        if (!data) return;
+        // Fetch all alerts in the visible map bounds
+        const bounds = map.getBounds();
+        const allAlerts = await fetchAlertsInBounds(bounds);
+        
+        // Also fetch alerts at the GPS point to determine if we're inside any polygon
+        const pointAlerts = await fetchAlertsAt(lat, lon);
+        
+        // Display all polygons in the map view
         layer.clearLayers();
-        if (data) layer.addData(data);
-        status.inside = summarizeWarningType(data);
+        if (allAlerts && allAlerts.features) {
+          layer.addData(allAlerts);
+        }
+        
+        // Check if GPS point is inside any polygon for status detection
+        status.inside = summarizeWarningType(pointAlerts);
         status.insideAt = Date.now();
         if (status.inside) {
           status.near = null;
