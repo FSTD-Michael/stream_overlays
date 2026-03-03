@@ -217,18 +217,44 @@
     }
 
     async function fetchAlertsInBounds(bounds) {
-      // NWS Alerts API bbox format: west,south,east,north
+      // NWS Alerts API doesn't support bbox, so we query multiple points across the map bounds
+      // and combine the results to get all alerts visible in the map area
       const west = bounds.getWest();
       const south = bounds.getSouth();
       const east = bounds.getEast();
       const north = bounds.getNorth();
-      const url = `https://api.weather.gov/alerts/active?bbox=${west},${south},${east},${north}`;
-      const res = await fetch(url, {
-        cache: "no-store",
-        headers: { Accept: "application/geo+json" },
-      });
-      if (!res.ok) return null;
-      return await res.json();
+      
+      // Create a grid of points across the bounds (3x3 grid = 9 points)
+      const latStep = (north - south) / 2;
+      const lonStep = (east - west) / 2;
+      const points = [];
+      for (let i = 0; i <= 2; i++) {
+        for (let j = 0; j <= 2; j++) {
+          points.push([south + i * latStep, west + j * lonStep]);
+        }
+      }
+      
+      // Fetch alerts for all points in parallel
+      const results = await Promise.all(
+        points.map(([lat, lon]) => fetchAlertsAt(lat, lon).catch(() => null))
+      );
+      
+      // Combine all features, deduplicating by alert ID
+      const allFeatures = [];
+      const seenIds = new Set();
+      for (const data of results) {
+        if (data && data.features) {
+          for (const feature of data.features) {
+            const id = feature.id || feature.properties?.id;
+            if (id && !seenIds.has(id)) {
+              seenIds.add(id);
+              allFeatures.push(feature);
+            }
+          }
+        }
+      }
+      
+      return { type: "FeatureCollection", features: allFeatures };
     }
 
     async function update(lat, lon) {
