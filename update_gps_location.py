@@ -174,6 +174,7 @@ def main() -> int:
                 lat: Optional[float] = None
                 lon: Optional[float] = None
                 heading: Optional[float] = None
+                speed: Optional[float] = None  # Speed in knots
                 last_status_time = start_time
                 nmea_count = 0
 
@@ -241,12 +242,26 @@ def main() -> int:
                                 heading = float(tc)
                         except Exception:
                             pass
+                        # Extract speed over ground (in knots)
+                        sog = getattr(msg, "spd_over_grnd", None)
+                        try:
+                            if sog not in (None, ""):
+                                speed = float(sog)
+                        except Exception:
+                            pass
                     elif st == "VTG":
                         # Track Made Good and Ground Speed
                         tc = getattr(msg, "true_track", None) or getattr(msg, "true_course", None)
                         try:
                             if tc not in (None, ""):
                                 heading = float(tc)
+                        except Exception:
+                            pass
+                        # Extract ground speed (in knots)
+                        gs = getattr(msg, "spd_over_grnd_kts", None) or getattr(msg, "spd_over_grnd", None)
+                        try:
+                            if gs not in (None, ""):
+                                speed = float(gs)
                         except Exception:
                             pass
 
@@ -286,6 +301,8 @@ def main() -> int:
                 payload = {"lat": lat, "lon": lon, "location": location, "updatedAt": updated_at}
                 if heading is not None and isinstance(heading, float):
                     payload["heading"] = heading
+                if speed is not None and isinstance(speed, float):
+                    payload["speed"] = round(speed, 1)  # Speed in knots
 
                 if write_local_path:
                     atomic_write_json(write_local_path, payload)

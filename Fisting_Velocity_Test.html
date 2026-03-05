@@ -220,7 +220,7 @@
   <script src="common/location.js?v=2"></script>
   <script src="common/clock.js?v=3"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="common/map_overlays.js?v=13"></script>
+  <script src="common/map_overlays.js?v=14"></script>
   <script src="common/legend.js?v=7"></script>
   <script>
     const map = L.map('map', {
@@ -396,14 +396,14 @@
 
     async function updateLocation() {
       try {
-        const { lat, lon, location, updatedAt, heading } = await window.OverlayLocation.fetchLocation();
+        const { lat, lon, location, updatedAt, heading, speed } = await window.OverlayLocation.fetchLocation();
 
         if (window.OverlayClock && window.OverlayClock.updateTimeZoneFromLatLon) {
           window.OverlayClock.updateTimeZoneFromLatLon(lat, lon);
         }
 
         map.setView([lat, lon]);
-        headingMarker.set(lat, lon, heading);
+        headingMarker.set(lat, lon, heading, speed);
 
         const textEl = document.getElementById('target-text');
         textEl.textContent = `ACTIVELY FISTING: ${location}`;

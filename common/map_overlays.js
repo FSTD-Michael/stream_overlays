@@ -79,11 +79,17 @@
 
     let marker = null;
 
-    function setHeadingOnElement(el, heading) {
+    function setHeadingOnElement(el, heading, speed) {
       if (!el) return;
       const arrow = el.querySelector('[data-role="heading-arrow"]');
       if (!arrow) return;
-      if (typeof heading !== "number" || !Number.isFinite(heading)) {
+      
+      // Show arrow only if we have heading AND speed is above 5 mph (4.34 knots)
+      const speedKnots = typeof speed === "number" && Number.isFinite(speed) ? speed : 0;
+      const speedMph = speedKnots * 1.15078; // Convert knots to mph
+      const minSpeedMph = 5;
+      
+      if (typeof heading !== "number" || !Number.isFinite(heading) || speedMph < minSpeedMph) {
         arrow.style.display = "none";
         return;
       }
@@ -91,7 +97,7 @@
       arrow.style.transform = `translate(-50%, -65%) rotate(${heading}deg)`;
     }
 
-    function set(lat, lon, heading) {
+    function set(lat, lon, heading, speed) {
       if (!marker) {
         marker = L.marker([lat, lon], { icon }).addTo(map);
       } else {
@@ -100,7 +106,7 @@
 
       // Ensure the DOM exists before applying rotation.
       const el = marker.getElement && marker.getElement();
-      setHeadingOnElement(el, heading);
+      setHeadingOnElement(el, heading, speed);
     }
 
     return { set };

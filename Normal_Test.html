@@ -235,7 +235,7 @@
   <script src="common/state.js?v=1"></script>
   <script src="common/clock.js?v=3"></script>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="common/map_overlays.js?v=13"></script>
+  <script src="common/map_overlays.js?v=14"></script>
   <script src="common/legend.js?v=7"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
@@ -389,7 +389,7 @@
 
     async function updateLocation() {
       try {
-        const { lat, lon, location, updatedAt, heading } = await window.OverlayLocation.fetchLocation();
+        const { lat, lon, location, updatedAt, heading, speed } = await window.OverlayLocation.fetchLocation();
 
         if (window.OverlayClock && window.OverlayClock.updateTimeZoneFromLatLon) {
           window.OverlayClock.updateTimeZoneFromLatLon(lat, lon);
@@ -397,7 +397,7 @@
 
         map.setView([lat, lon]);
 
-        headingMarker.set(lat, lon, heading);
+        headingMarker.set(lat, lon, heading, speed);
 
         if (!targetOverride && targetEl) targetEl.textContent = `Target: ${location}`;
         setGpsMeta(updatedAt, lat, lon);
