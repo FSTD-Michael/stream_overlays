@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime, timezone
 from math import atan2, cos, degrees, radians, sin
+from typing import Optional
 
 import pynmea2
 import requests
@@ -14,7 +15,7 @@ from serial.tools import list_ports
 DEFAULT_FIREBASE_URL = "https://tfoverlays-default-rtdb.firebaseio.com/location.json"
 
 
-def pick_default_port() -> str | None:
+def pick_default_port() -> Optional[str]:
     """Try to pick a reasonable default serial port (macOS-friendly)."""
     ports = list(list_ports.comports())
     if not ports:
@@ -80,7 +81,7 @@ def push_to_firebase(firebase_url: str, payload: dict, timeout_s: float = 5.0) -
         print("Firebase push error:", e)
 
 
-def push_to_endpoint(push_url: str, payload: dict, bearer_token: str | None, timeout_s: float = 5.0) -> None:
+def push_to_endpoint(push_url: str, payload: dict, bearer_token: Optional[str], timeout_s: float = 5.0) -> None:
     headers = {}
     if bearer_token:
         headers["Authorization"] = f"Bearer {bearer_token}"
@@ -150,8 +151,8 @@ def main() -> int:
     if write_local_path:
         print(f"Will also write local JSON: {write_local_path}")
 
-    prev_coords: tuple[float, float] | None = None
-    prev_location: str | None = None
+    prev_coords: Optional[tuple[float, float]] = None
+    prev_location: Optional[str] = None
     geocode_cache: dict[tuple[float, float], str] = {}
 
     def bearing_deg(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> float:
@@ -162,18 +163,41 @@ def main() -> int:
         x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(dlambda)
         return (degrees(atan2(y, x)) + 360.0) % 360.0
 
+    cycle_count = 0
     while True:
         try:
-            with serial.Serial(port, baudrate=args.baud, timeout=1) as ser:
+            cycle_count += 1
+            print(f"[Cycle {cycle_count}] Opening serial port {port} at {args.baud} baud...")
+            with serial.Serial(port, baudrate=args.baud, timeout=2) as ser:
+                print(f"[Cycle {cycle_count}] Serial port opened. Waiting for GPS data...")
                 start_time = time.time()
-                lat: float | None = None
-                lon: float | None = None
-                heading: float | None = None
+                lat: Optional[float] = None
+                lon: Optional[float] = None
+                heading: Optional[float] = None
+                last_status_time = start_time
+                nmea_count = 0
 
                 while time.time() - start_time < args.fix_timeout:
-                    line = ser.readline().decode("ascii", errors="replace")
+                    try:
+                        line = ser.readline().decode("ascii", errors="replace").strip()
+                    except Exception as e:
+                        print(f"[Cycle {cycle_count}] Error reading from serial: {e}")
+                        break
+                    
+                    if not line:
+                        # Empty line - show we're still trying
+                        if time.time() - last_status_time > 2:
+                            print(f"[Cycle {cycle_count}] Waiting for GPS data... (no data received yet)")
+                            last_status_time = time.time()
+                        continue
+                    
                     if not line.startswith("$"):
                         continue
+                    
+                    nmea_count += 1
+                    # Show first few NMEA sentences to confirm data is coming
+                    if nmea_count <= 3:
+                        print(f"[Cycle {cycle_count}] Received NMEA: {line[:60]}...")
 
                     try:
                         msg = pynmea2.parse(line)
@@ -182,17 +206,35 @@ def main() -> int:
 
                     st = getattr(msg, "sentence_type", "")
                     if st == "GGA":
-                        if getattr(msg, "gps_qual", 0) not in [1, 2]:
+                        gps_qual = getattr(msg, "gps_qual", 0)
+                        if gps_qual not in [1, 2]:
+                            if nmea_count <= 5:
+                                print(f"  [GGA] GPS quality {gps_qual} (need 1 or 2), skipping...")
                             continue
-                        lat = round(msg.latitude, args.coord_precision)
-                        lon = round(msg.longitude, args.coord_precision)
-                    elif st == "RMC":
-                        # Recommended Minimum Navigation Information
-                        if getattr(msg, "status", "") != "A":
-                            continue
-                        if getattr(msg, "latitude", None) and getattr(msg, "longitude", None):
+                        try:
                             lat = round(msg.latitude, args.coord_precision)
                             lon = round(msg.longitude, args.coord_precision)
+                            print(f"  [GGA] Got coordinates: {lat}, {lon} (quality: {gps_qual})")
+                        except Exception as e:
+                            if nmea_count <= 5:
+                                print(f"  [GGA] Error extracting lat/lon: {e}")
+                            continue
+                    elif st == "RMC":
+                        # Recommended Minimum Navigation Information
+                        status = getattr(msg, "status", "")
+                        if status != "A":
+                            if nmea_count <= 5:
+                                print(f"  [RMC] Status '{status}' (need 'A'), skipping...")
+                            continue
+                        try:
+                            if getattr(msg, "latitude", None) and getattr(msg, "longitude", None):
+                                lat = round(msg.latitude, args.coord_precision)
+                                lon = round(msg.longitude, args.coord_precision)
+                                print(f"  [RMC] Got coordinates: {lat}, {lon}")
+                        except Exception as e:
+                            if nmea_count <= 5:
+                                print(f"  [RMC] Error extracting lat/lon: {e}")
+                            continue
                         tc = getattr(msg, "true_course", None)
                         try:
                             if tc not in (None, ""):
@@ -208,50 +250,65 @@ def main() -> int:
                         except Exception:
                             pass
 
-                    if lat is not None and lon is not None and heading is not None:
+                    # Break once we have lat/lon (heading is optional)
+                    if lat is not None and lon is not None:
+                        print(f"[Cycle {cycle_count}] ✅ Got valid GPS fix: {lat}, {lon}")
                         break
 
                 if lat is None or lon is None:
-                    print("No valid GPS fix this cycle.")
+                    if nmea_count == 0:
+                        print(f"[Cycle {cycle_count}] ⚠️  No NMEA data received from GPS! Check connection and baud rate.")
+                    else:
+                        print(f"[Cycle {cycle_count}] No valid GPS fix this cycle (received {nmea_count} NMEA sentences, waited {args.fix_timeout}s). Retrying in {args.interval}s...")
                     time.sleep(args.interval)
                     continue
 
                 coords = (lat, lon)
                 prev_coords_snapshot = prev_coords
 
+                # Calculate heading if not provided and we have previous coords
                 if heading is None and prev_coords_snapshot and coords != prev_coords_snapshot:
                     heading = round(bearing_deg(prev_coords_snapshot[0], prev_coords_snapshot[1], lat, lon), 1)
 
-                    if args.no_geocode:
-                        location = prev_location or "Unknown"
+                # Get location (reverse geocode)
+                if args.no_geocode:
+                    location = prev_location or "Unknown"
+                else:
+                    # Cache by rounded coords to reduce geocode calls while stationary.
+                    location = geocode_cache.get(coords) or prev_location
+                    if not location or coords != prev_coords:
+                        print(f"[Cycle {cycle_count}] Reverse geocoding {lat}, {lon}...")
+                        location = reverse_geocode(lat, lon)
+                        geocode_cache[coords] = location
+                        prev_location = location
+
+                updated_at = datetime.now(timezone.utc).isoformat()
+                payload = {"lat": lat, "lon": lon, "location": location, "updatedAt": updated_at}
+                if heading is not None and isinstance(heading, float):
+                    payload["heading"] = heading
+
+                if write_local_path:
+                    atomic_write_json(write_local_path, payload)
+                    print(f"[Cycle {cycle_count}] ✅ Wrote local JSON: {write_local_path} -> {location} ({lat}, {lon})")
+
+                if not args.no_firebase:
+                    # If a generic push endpoint is configured, prefer it and skip Firebase.
+                    if args.push_url:
+                        push_to_endpoint(args.push_url, payload, args.push_token)
                     else:
-                        # Cache by rounded coords to reduce geocode calls while stationary.
-                        location = geocode_cache.get(coords) or prev_location
-                        if not location or coords != prev_coords:
-                            location = reverse_geocode(lat, lon)
-                            geocode_cache[coords] = location
-                            prev_location = location
+                        push_to_firebase(args.firebase_url, payload)
 
-                    updated_at = datetime.now(timezone.utc).isoformat()
-                    payload = {"lat": lat, "lon": lon, "location": location, "updatedAt": updated_at}
-                    if heading is not None and isinstance(heading, float):
-                        payload["heading"] = heading
-
-                    if write_local_path:
-                        atomic_write_json(write_local_path, payload)
-                        print(f"Wrote local JSON: {write_local_path} -> {location} ({lat}, {lon})")
-
-                    if not args.no_firebase:
-                        # If a generic push endpoint is configured, prefer it and skip Firebase.
-                        if args.push_url:
-                            push_to_endpoint(args.push_url, payload, args.push_token)
-                        else:
-                            push_to_firebase(args.firebase_url, payload)
-
-                    prev_coords = coords
+                prev_coords = coords
+                print(f"[Cycle {cycle_count}] Waiting {args.interval}s before next cycle...")
+            time.sleep(args.interval)
+        except serial.SerialException as e:
+            print(f"⚠️  Serial port error: {e}")
+            print(f"   Retrying in {args.interval}s...")
             time.sleep(args.interval)
         except Exception as e:
-            print("Error:", e)
+            print(f"⚠️  Unexpected error: {e}")
+            import traceback
+            traceback.print_exc()
             time.sleep(args.interval)
 
 
